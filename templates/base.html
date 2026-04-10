@@ -60,7 +60,7 @@
   <aside class="w-20 bg-dark-800 border-r border-dark-600 flex flex-col items-center py-6 fixed h-full z-50">
     <div class="mb-8">
       <div class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center glow p-2">
-        <img src="{{ url_for('static', filename='img/commodity.png') }}" alt="PIHPS Logo" class="w-full h-full object-contain">
+        <img src="{{ url_for('static', filename='img/chicken.png') }}" alt="PIHPS Logo" class="w-full h-full object-contain">
       </div>
     </div>
     
@@ -78,6 +78,13 @@
         <span class="text-[10px]">Dashboard</span>
       </button>
     </nav>
+    
+    <!-- Customer Service Button -->
+    <div class="mt-auto mb-4">
+      <button onclick="toggleContactPopup()" class="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 hover:from-primary hover:to-accent flex items-center justify-center transition-all glow">
+        <img src="{{ url_for('static', filename='img/customer-service.png') }}" alt="Contact" class="w-6 h-6 object-contain">
+      </button>
+    </div>
   </aside>
 
   <!-- Main Content -->
@@ -86,8 +93,8 @@
       <!-- Top Bar -->
       <div class="flex items-center justify-between mb-6">
         <div>
-          <div class="text-sm text-gray-500 mb-1">Personal account / Dashboard</div>
-          <h1 class="text-2xl font-bold text-white">PIHPS BI Dashboard</h1>
+          <div class="text-sm text-gray-500 mb-1">Data Scrapper</div>
+          <h1 class="text-2xl font-bold text-white">PIHPS Re-Scrapping</h1>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 glass rounded-full">
           <i class="fas fa-circle text-success text-xs animate-pulse"></i>
@@ -99,8 +106,100 @@
     </div>
   </main>
 
+  <!-- Contact Popup Modal - Placed at end for highest z-index stacking -->
+  <div id="contact-popup" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] hidden flex items-center justify-center p-4" onclick="closeContactPopup(event)">
+    <div class="glass rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col" onclick="event.stopPropagation()">
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-dark-600 bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center glow">
+            <i class="fas fa-user-circle text-white text-sm"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Tentang Developer</h2>
+            <p class="text-xs text-gray-400">PIHPS Re-Scrapping Dashboard</p>
+          </div>
+        </div>
+        <button onclick="closeContactPopup()" class="w-8 h-8 rounded-full bg-dark-700 hover:bg-dark-600 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-sm"></i>
+        </button>
+      </div>
+      
+      <!-- Content Area - Fixed height like AI Assistant -->
+      <div class="h-[400px] overflow-y-auto p-4 space-y-4 custom-scrollbar bg-dark-900/50">
+        <!-- Creator Info -->
+        <div class="glass rounded-xl p-4">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center glow flex-shrink-0">
+              <i class="fas fa-user text-white text-xl"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-semibold text-white">Rohis Rachman</h3>
+              <p class="text-sm text-gray-400">Data Enthusiastic</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="glass rounded-xl p-4">
+          <p class="text-sm text-gray-300 leading-relaxed">
+            Dashboard ini dibuat untuk mengoptimalkan proses pengambilan data harga bahan pangan dari PIHPS (Pusat Informasi Harga Pangan Strategis). Dengan fitur scraping otomatis, analisis tren harga, dan proyeksi forecasting untuk mendukung pengambilan keputusan di sektor pangan Indonesia.
+          </p>
+        </div>
+        
+        <!-- Social Media Links - Horizontal Row -->
+        <div class="glass rounded-xl p-4">
+          <h4 class="text-xs font-medium text-gray-500 mb-3 text-center uppercase tracking-wider">Hubungi Saya</h4>
+          <div class="flex justify-center gap-3">
+            <!-- LinkedIn -->
+            <a href="https://www.linkedin.com/in/rohis-rachman-43598b213/" target="_blank" class="flex flex-col items-center gap-2 p-2 hover:bg-[#0077B5]/10 rounded-lg transition-colors group">
+              <div class="w-10 h-10 rounded-full bg-[#0077B5]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <img src="{{ url_for('static', filename='img/linkedin.png') }}" alt="LinkedIn" class="w-5 h-5 object-contain">
+              </div>
+              <span class="text-[10px] text-gray-400 group-hover:text-white transition-colors">LinkedIn</span>
+            </a>
+            
+            <!-- GitHub -->
+            <a href="https://github.com/rohisrachman" target="_blank" class="flex flex-col items-center gap-2 p-2 hover:bg-gray-700/30 rounded-lg transition-colors group">
+              <div class="w-10 h-10 rounded-full bg-gray-700/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <img src="{{ url_for('static', filename='img/github.png') }}" alt="GitHub" class="w-5 h-5 object-contain">
+              </div>
+              <span class="text-[10px] text-gray-400 group-hover:text-white transition-colors">GitHub</span>
+            </a>
+            
+            <!-- Dribbble -->
+            <a href="https://dribbble.com/rohis" target="_blank" class="flex flex-col items-center gap-2 p-2 hover:bg-[#EA4C89]/10 rounded-lg transition-colors group">
+              <div class="w-10 h-10 rounded-full bg-[#EA4C89]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <img src="{{ url_for('static', filename='img/dribble.png') }}" alt="Dribbble" class="w-5 h-5 object-contain">
+              </div>
+              <span class="text-[10px] text-gray-400 group-hover:text-white transition-colors">Dribbble</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-4 py-3 bg-dark-800/50 border-t border-dark-600/50 text-center">
+        <p class="text-[10px] text-gray-500">© 2026 Rohis Rachman • Made with ☕ for Indonesia</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script>
+    // Contact Popup Functions
+    function toggleContactPopup() {
+      const popup = document.getElementById('contact-popup');
+      popup.classList.toggle('hidden');
+    }
+    
+    function closeContactPopup(event) {
+      if (!event || event.target.id === 'contact-popup') {
+        document.getElementById('contact-popup').classList.add('hidden');
+      }
+    }
+  </script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

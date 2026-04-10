@@ -58,5 +58,16 @@
       "Gula Pasir"
     ],
     "provinsi": "Sulawesi Tengah"
+  },
+  "bc061326-35b": {
+    "id": "bc061326-35b",
+    "name": "harga_pangan_2025-04-10_sd_2026-04-10.xlsx",
+    "timestamp": "2026-04-10T17:20:00.234300",
+    "rows": 4,
+    "komoditas_count": 1,
+    "komoditas": [
+      "Beras"
+    ],
+    "provinsi": "Gorontalo"
   }
 }

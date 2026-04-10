@@ -1,7 +1,5 @@
 """
 PIHPS BI — Flask Scraping Dashboard
-Algoritma: REST API langsung (requests) — tanpa Selenium/Chrome
-Endpoint: bi.go.id/hargapangan/WebSite/TabelHarga/*
 """
 
 import io
@@ -13,6 +11,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import quote_plus
 
 from flask import Flask, render_template, request, jsonify, send_file
 import requests
@@ -20,6 +19,12 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import pandas as pd
 import warnings
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 warnings.filterwarnings('ignore')
 
@@ -37,7 +42,69 @@ HEADERS = {
 STORAGE_DIR = Path("storage")
 STORAGE_DIR.mkdir(exist_ok=True)
 
-# In-memory storage
+# ── MongoDB Connection ───────────────────────────────────────────
+# Connection details from .env file (password with special chars needs encoding)
+MONGO_USER = os.environ.get('MONGO_USER', 'Vercel-Admin-atlas-citron-cushion')
+MONGO_PASS = os.environ.get('MONGO_PASS', '')
+MONGO_HOST = os.environ.get('MONGO_HOST', 'atlas-citron-cushion.4u1fsog.mongodb.net')
+MONGO_DB = os.environ.get('MONGO_DB', 'pihps_dashboard')
+
+# Build connection string with encoded password
+mongo_client = None
+db = None
+
+def init_mongodb():
+    """Initialize MongoDB connection"""
+    global mongo_client, db
+    try:
+        if MONGO_PASS:
+            # Encode username and password for special characters
+            encoded_user = quote_plus(MONGO_USER)
+            encoded_pass = quote_plus(MONGO_PASS)
+            # Use exact MongoDB Atlas format
+            mongo_uri = f"mongodb+srv://{encoded_user}:{encoded_pass}@{MONGO_HOST}/?retryWrites=true&w=majority&appName=atlas-citron-cushion"
+            
+            # Debug: print connection string (hide password)
+            debug_uri = mongo_uri.replace(encoded_pass, "***")
+            print(f"🔌 Connecting to: {debug_uri}")
+            
+            # Connect with SSL certificate verification (try True first, fallback to False for dev)
+            try:
+                mongo_client = MongoClient(
+                    mongo_uri, 
+                    serverSelectionTimeoutMS=5000,
+                    tls=True,
+                    tlsAllowInvalidCertificates=False
+                )
+                mongo_client.admin.command('ping')
+            except Exception:
+                # Fallback: allow invalid certificates for development
+                print("⚠️  SSL certificate verification failed, retrying with tlsAllowInvalidCertificates=True")
+                mongo_client = MongoClient(
+                    mongo_uri, 
+                    serverSelectionTimeoutMS=5000,
+                    tls=True,
+                    tlsAllowInvalidCertificates=True
+                )
+                mongo_client.admin.command('ping')
+            
+            db = mongo_client.get_database(MONGO_DB)
+            print("✅ MongoDB connected successfully")
+            return True
+        else:
+            print("⚠️  MongoDB password not found. Please set MONGO_PASS in .env file")
+            return False
+    except ConnectionFailure as e:
+        print(f"❌ MongoDB connection failed: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ MongoDB error: {e}")
+        return False
+
+# Try to connect on startup
+init_mongodb()
+
+# In-memory storage (fallback if MongoDB not available)
 jobs = {}
 storage_metadata = {}  # {file_id: {name, timestamp, rows, komoditas_count, etc}}
 
@@ -192,7 +259,7 @@ REGENCY_RECOMMENDATIONS = {
     'kalimantan selatan': ['Banjarmasin', 'Banjarbaru'],
     'kalimantan timur': ['Samarinda', 'Balikpapan'],
     'sulawesi utara': ['Manado', 'Tomohon'],
-    'sulawesi tengah': ['Palu', 'Gorontalo'],
+    'sulawesi tengah': ['Palu', 'Kab. Banggai'],
     'sulawesi selatan': ['Makassar', 'Parepare', 'Palopo'],
     'sulawesi tenggara': ['Kendari', 'Bau-Bau'],
     'gorontalo': ['Gorontalo', 'Tilamuta'],
