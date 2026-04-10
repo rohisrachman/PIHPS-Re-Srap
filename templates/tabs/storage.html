@@ -1,0 +1,80 @@
+<!-- TAB 2: DATA TERSIMPAN -->
+<div id="storage-tab" class="tab-content h-full">
+  <div class="glass rounded-2xl overflow-hidden h-full flex flex-col">
+    <div class="px-6 py-4 border-b border-dark-600 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+          <i class="fas fa-database text-primary"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-semibold text-white">Data Tersimpan</h2>
+          <p class="text-xs text-gray-500">Kelola file hasil scraping</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="loadStorageList()" class="px-4 py-2 text-sm font-medium bg-dark-700 hover:bg-dark-600 text-gray-300 rounded-lg transition-colors flex items-center gap-2">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button onclick="clearAllStorage()" class="px-4 py-2 text-sm font-medium bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors flex items-center gap-2">
+          <i class="fas fa-trash"></i> Hapus Semua
+        </button>
+      </div>
+    </div>
+    <div class="flex-1 p-6 overflow-y-auto custom-scrollbar">
+      <div id="storage-list" class="space-y-3">
+        <div class="flex items-center justify-center h-full text-gray-500">
+          <div class="text-center">
+            <div class="text-5xl mb-4 opacity-50">📭</div>
+            <p class="text-sm">Tidak ada data tersimpan</p>
+            <p class="text-xs mt-2 text-gray-600">Mulai scraping untuk menyimpan data</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Storage Preview Popup Modal -->
+<div id="storage-preview-popup" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+  <div class="glass rounded-2xl w-full max-w-5xl h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-dark-600 bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+          <i class="fas fa-table text-white text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-semibold text-white">Preview Data</h2>
+          <p id="storage-preview-filename" class="text-xs text-gray-400">filename.xlsx</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="storage-preview-rows" class="text-xs text-gray-400 bg-dark-700 px-3 py-1 rounded-full">0 baris</span>
+        <button onclick="closeStoragePreview()" class="w-8 h-8 rounded-full bg-dark-700 hover:bg-dark-600 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-sm"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Table Container -->
+    <div class="flex-1 overflow-hidden bg-dark-900/50 p-4">
+      <div id="storage-preview-table" class="h-full overflow-auto custom-scrollbar rounded-xl border border-dark-600">
+        <!-- Table content will be injected here -->
+        <div class="flex items-center justify-center h-full text-gray-500">
+          <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-3xl mb-4 text-primary"></i>
+            <p class="text-sm">Memuat data...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="px-6 py-3 border-t border-dark-600 bg-dark-800/50 flex items-center justify-between">
+      <p class="text-xs text-gray-500">Menampilkan preview 50 baris pertama</p>
+      <button onclick="closeStoragePreview()" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-gray-300 text-xs font-medium rounded-lg transition-colors">
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIHPS BI — Scraping Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e14;
+    --surface: #111520;
+    --surface2: #161c2d;
+    --border: #1f2d4a;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --green: #00ff88;
+    --red: #ff4444;
+    --yellow: #ffd700;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .container { max-width: 1300px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header { padding: 28px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+  .header-inner { display: flex; align-items: center; gap: 18px; }
+  .logo {
+    width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), #0066ff);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: 0 0 24px rgba(0,212,255,0.25); flex-shrink: 0;
+  }
+  .header-text h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
+  .header-text p { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+  .api-badge {
+    margin-left: auto; font-family: var(--mono); font-size: 11px; padding: 5px 12px;
+    border-radius: 20px; background: rgba(0,255,136,0.1); color: var(--green);
+    border: 1px solid rgba(0,255,136,0.25); display: flex; align-items: center; gap: 6px;
+  }
+  .api-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+
+  /* Grid */
+  .grid { display: grid; grid-template-columns: 1fr 400px; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; animation: fadeUp 0.35s ease both; }
+  .card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .card-header h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .card-body { padding: 18px; }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--mono); }
+  input[type=text], input[type=date], input[type=number], select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 14px;
+    padding: 9px 12px; outline: none; appearance: none; -webkit-appearance: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+  select option { background: var(--surface2); }
+  .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Loading state for selects */
+  select.loading { opacity: 0.5; }
+  .select-wrap { position: relative; }
+  .select-spinner {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: none;
+  }
+  .select-wrap.loading .select-spinner { display: block; }
+
+  /* Kab/kota tags */
+  .kabkota-container {
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
+    padding: 8px 10px; min-height: 54px; cursor: text; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+    transition: border-color 0.2s;
+  }
+  .kabkota-container:focus-within { border-color: var(--accent); }
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+    border-radius: 20px; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.25);
+    color: var(--accent); font-size: 12px; white-space: nowrap;
+  }
+  .tag-remove { cursor: pointer; opacity: 0.5; font-size: 14px; line-height: 1; }
+  .tag-remove:hover { opacity: 1; }
+  .kabkota-input { border: none; background: transparent; min-width: 140px; flex: 1; padding: 2px 4px; color: var(--text); font-size: 13px; outline: none; font-family: var(--sans); }
+  .kabkota-hint { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* Komoditas checkboxes */
+  .kom-toolbar { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .btn-xs {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px;
+    border-radius: 5px; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .btn-xs:hover { border-color: var(--accent); color: var(--accent); }
+  .kom-grid {
+    max-height: 220px; overflow-y: auto; border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px; background: var(--surface2);
+  }
+  .kom-grid::-webkit-scrollbar { width: 3px; }
+  .kom-grid::-webkit-scrollbar-thumb { background: var(--border); }
+  .kom-item {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+    border-radius: 6px; cursor: pointer; transition: background 0.15s;
+  }
+  .kom-item:hover { background: rgba(0,212,255,0.05); }
+  .kom-check {
+    width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--border);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .kom-item.checked .kom-check { background: var(--accent); border-color: var(--accent); }
+  .kom-item.checked .kom-check::after { content: '✓'; font-size: 9px; color: #000; font-weight: 700; }
+  .kom-label { font-size: 13px; }
+  .kom-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .kom-loading { padding: 20px; text-align: center; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+  /* Buttons */
+  .btn-submit {
+    width: 100%; padding: 13px; background: linear-gradient(135deg, var(--accent), #0066ff);
+    color: #000; font-weight: 700; font-size: 15px; border: none; border-radius: 10px;
+    cursor: pointer; font-family: var(--sans); transition: all 0.2s; margin-top: 6px;
+  }
+  .btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,212,255,0.3); }
+  .btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-cancel {
+    width: 100%; padding: 9px; background: transparent; color: var(--red); font-weight: 600;
+    font-size: 13px; border: 1px solid var(--red); border-radius: 10px; cursor: pointer;
+    font-family: var(--sans); transition: all 0.2s; margin-top: 6px; display: none;
+  }
+  .btn-cancel:hover { background: rgba(255,68,68,0.08); }
+
+  /* Right panel */
+  .right-panel { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Progress */
+  .progress-status { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .status-dot.running { background: var(--accent); animation: pulse 1.2s infinite; }
+  .status-dot.done    { background: var(--green); }
+  .status-dot.error   { background: var(--red); }
+  .status-text { font-size: 14px; font-weight: 600; }
+  .progress-meta { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .prog-bar-bg { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+  .prog-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 3px; transition: width 0.4s ease; }
+  .prog-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .current-kom { margin-top: 12px; padding: 9px 12px; background: var(--surface2); border-radius: 8px; font-size: 13px; display: none; }
+  .current-kom span { color: var(--accent); font-weight: 600; }
+
+  .log-box {
+    background: #070a0f; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; height: 200px; overflow-y: auto;
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.7; margin-top: 14px;
+  }
+  .log-box::-webkit-scrollbar { width: 3px; }
+  .log-box::-webkit-scrollbar-thumb { background: var(--border); }
+  .log-ok   { color: var(--green); }
+  .log-err  { color: var(--red); }
+  .log-warn { color: var(--yellow); }
+  .log-info { color: var(--accent); }
+  .log-muted { color: var(--muted); }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 26px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Download */
+  .download-section {
+    margin-top: 14px; padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(0,255,136,0.05), rgba(0,212,255,0.05));
+    border: 1px solid rgba(0,255,136,0.2); border-radius: 10px;
+    display: none; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .download-section.show { display: flex; }
+  .download-info p { font-size: 13px; font-weight: 600; color: var(--green); }
+  .download-info small { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .btn-download {
+    padding: 9px 18px; background: var(--green); color: #000; border: none;
+    border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px;
+    font-family: var(--sans); transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-download:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,255,136,0.3); }
+
+  /* Preview table */
+  .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--surface2); padding: 9px 12px; text-align: left; font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; border-bottom: 1px solid var(--border); }
+  td { padding: 7px 12px; border-bottom: 1px solid rgba(31,45,74,0.4); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,212,255,0.03); }
+  .stats-table-wrap { max-height: 190px; overflow-y: auto; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    padding: 12px 20px; background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: 14px; font-weight: 600; font-family: var(--sans);
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Dashboard styles */
+  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 20px; }
+  .dashboard-stat {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; text-align: center;
+  }
+  .dashboard-stat-value { font-size: 32px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .dashboard-stat-label { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .chart-container { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 18px; position: relative; height: 300px; }
+  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+
+  /* Output panels scrollable wrapper */
+  .output-panels-wrapper {
+    display: flex; flex-direction: column; gap: 22px;
+    max-height: calc(100vh - 320px); overflow-y: auto;
+    padding-right: 6px;
+  }
+  .output-panels-wrapper::-webkit-scrollbar { width: 6px; }
+  .output-panels-wrapper::-webkit-scrollbar-track { background: transparent; }
+  .output-panels-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .output-panels-wrapper::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* Progress status - compact */
+  .progress-status { display: flex; align-items: center; gap: 8px; font-family: var(--mono); }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  .status-text { font-weight: 600; }
+  .progress-meta { font-size: 10px; color: var(--muted); }
+
+  /* Log box */
+  .log-box { 
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 8px; font-family: var(--mono); line-height: 1.3; color: var(--muted); overflow-y: auto;
+  }
+  .log-muted { color: var(--muted); font-size: 10px; }
+
+  /* Progress bar */
+  .prog-bar-bg { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .prog-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.3s; }
+  .prog-label { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* Current komoditas */
+  .current-kom { font-family: var(--mono); color: var(--muted); }
+
+  /* Stats row */
+  .stats-row { display: flex; gap: 8px; margin-top: 8px; }
+  .stat-box { flex: 1; background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.2); border-radius: 6px; padding: 8px; text-align: center; }
+  .stat-num { font-size: 16px; font-weight: 700; font-family: var(--mono); }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Download section */
+  .download-section { background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 6px; padding: 8px; text-align: center; }
+  .download-info { font-size: 12px; margin-bottom: 6px; }
+  .btn-download { background: var(--accent); color: #000; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 11px; }
+  .btn-download:hover { opacity: 0.9; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">🛒</div>
+      <div class="header-text">
+        <h1>PIHPS BI — Scraping Dashboard</h1>
+        <p>bi.go.id/hargapangan/WebSite/TabelHarga • Direct API (no Selenium)</p>
+      </div>
+      <div class="api-badge"><div class="api-dot"></div>REST API Mode</div>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('scraping')">🚀 Scraping</button>
+      <button class="tab-btn" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('saved-data')">💾 Data Tersimpan</button>
+    </div>
+  </header>
+
+  <div id="scraping" class="tab-content active">
+    {% include 'tab_scraping.html' %}
+  </div>
+
+  <div id="dashboard" class="tab-content">
+    {% include 'tab_dashboard.html' %}
+  </div>
+
+  <div id="saved-data" class="tab-content">
+    {% include 'tab_saved_data.html' %}
+  </div>
+
+  <div style="height:48px"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// ── Tab Management ──────────────────────────────────────────────────────────
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  
+  // Show selected tab
+  document.getElementById(tabName).classList.add('active');
+  event.target.classList.add('active');
+  
+  // Load dashboard if needed
+  if (tabName === 'dashboard') {
+    console.log('Loading dashboard...');
+    loadDashboard();
+  }
+  
+  if (tabName === 'saved-data') {
+    console.log('Loading saved data...');
+    loadSavedData();
+    // Add search listener
+    const searchInput = document.getElementById('search-data');
+    if (searchInput) {
+      searchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') loadSavedData();
+      });
+    }
+  }
+}
+
+let priceChart = null;
+
+async function loadDashboard() {
+  try {
+    console.log('Loading dashboard data...');
+    
+    // Load summary
+    const summaryRes = await fetch('/api/dashboard/summary');
+    const summary = await summaryRes.json();
+    console.log('Summary response:', summary);
+    
+    const statTotalRecords = document.getElementById('stat-total-records');
+    const statCommodities = document.getElementById('stat-commodities');
+    const statProvinces = document.getElementById('stat-provinces');
+    const statLastUpdate = document.getElementById('stat-last-update');
+    
+    if (statTotalRecords) statTotalRecords.textContent = (summary.total_records || 0).toLocaleString();
+    if (statCommodities) statCommodities.textContent = summary.unique_commodities || 0;
+    if (statProvinces) statProvinces.textContent = summary.unique_provinces || 0;
+    if (statLastUpdate) statLastUpdate.textContent = summary.last_update || '—';
+    
+    // Load commodity stats
+    const statsRes = await fetch('/api/dashboard/commodity-stats');
+    const stats = await statsRes.json();
+    console.log('Commodity stats:', stats);
+    renderCommodityStats(stats);
+    
+    // Load latest prices
+    const pricesRes = await fetch('/api/dashboard/latest-prices');
+    const prices = await pricesRes.json();
+    console.log('Latest prices:', prices);
+    renderLatestPrices(prices);
+    
+    // Load chart data
+    const chartRes = await fetch('/api/dashboard/chart-data');
+    const chartData = await chartRes.json();
+    console.log('Chart data received, keys:', Object.keys(chartData).length, 'rows');
+    renderPriceChart(chartData);
+  } catch (e) {
+    console.error('Error loading dashboard:', e);
+    alert('Error loading dashboard: ' + e.message);
+  }
+}
+
+function renderCommodityStats(stats) {
+  const tbody = document.getElementById('commodity-stats-body');
+  if (!tbody) {
+    console.warn('[renderCommodityStats] commodity-stats-body element not found');
+    return;
+  }
+  if (!stats.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted)">Belum ada data</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = stats.map(s => `
+    <tr>
+      <td>${s.commodity}</td>
+      <td style="color: var(--accent); font-family: var(--mono)">Rp ${s.avg_price.toLocaleString()}</td>
+      <td style="color: var(--green); font-family: var(--mono)">Rp ${s.min_price.toLocaleString()}</td>
+      <td style="color: var(--red); font-family: var(--mono)">Rp ${s.max_price.toLocaleString()}</td>
+      <td style="font-family: var(--mono); color: var(--muted)">${s.count}</td>
+    </tr>
+  `).join('');
+}
+
+function renderLatestPrices(prices) {
+  const tbody = document.getElementById('latest-prices-body');
+  if (!tbody) {
+    console.warn('[renderLatestPrices] latest-prices-body element not found');
+    return;
+  }
+  if (!prices.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--muted)">Belum ada data</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = prices.slice(0, 20).map(p => `
+    <tr>
+      <td>${p.commodity}</td>
+      <td style="color: var(--accent); font-family: var(--mono)">Rp ${p.price ? p.price.toLocaleString() : '—'}</td>
+      <td style="color: var(--muted); font-family: var(--mono); font-size: 11px">${p.date || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function renderPriceChart(chartData) {
+  const ctx = document.getElementById('priceChartCanvas');
+  if (!ctx) {
+    console.error('Chart canvas not found');
+    return;
+  }
+  
+  // Debug: log raw data
+  console.log('Chart raw data:', chartData);
+  
+  // Prepare data
+  const dates = Object.keys(chartData).sort();
+  console.log('Dates:', dates.length, dates.slice(0, 5));
+  
+  if (!dates.length) {
+    console.warn('No dates in chart data');
+    ctx.parentElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #64748b;">Belum ada data untuk visualisasi</div>';
+    return;
+  }
+  
+  const commodities = new Set();
+  dates.forEach(date => {
+    Object.keys(chartData[date] || {}).forEach(c => commodities.add(c));
+  });
+  
+  const commodityArray = Array.from(commodities).slice(0, 10);
+  console.log('Commodities:', commodityArray);
+  
+  const colors = [
+    '#00ff88', '#00d4ff', '#ff6b35', '#ffd700', '#00ccff',
+    '#ff4444', '#88ffff', '#ffaa00', '#00dd88', '#ff88ff'
+  ];
+  
+  const datasets = commodityArray.map((com, i) => ({
+    label: com,
+    borderColor: colors[i % colors.length],
+    backgroundColor: `${colors[i % colors.length]}15`,
+    borderWidth: 2,
+    pointRadius: 2,
+    pointBackgroundColor: colors[i % colors.length],
+    pointBorderColor: '#fff',
+    pointBorderWidth: 1,
+    tension: 0.4,
+    fill: true,
+    data: dates.map(date => {
+      const val = chartData[date] ? chartData[date][com] : null;
+      return val !== undefined && val !== null ? parseFloat(val) : null;
+    })
+  }));
+  
+  if (priceChart) priceChart.destroy();
+  
+  priceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.substring(5)), // Show MM-DD only
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color: '#e2e8f0',
+            font: { size: 11, family: "'Space Mono'" },
+            padding: 12
+          }
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          grid: { color: 'rgba(31,45,74,0.2)' },
+          ticks: { color: '#64748b', font: { size: 10 } }
+        },
+        y: {
+          display: true,
+          grid: { color: 'rgba(31,45,74,0.2)' },
+          ticks: { color: '#64748b', font: { size: 10 } }
+        }
+      }
+    }
+  });
+  console.log('Chart rendered with', dates.length, 'dates and', datasets.length, 'series');
+}
+
+async function loadSavedData(search = '') {
+  try {
+    const s = document.getElementById('search-data').value || search;
+    const url = s ? `/api/dashboard/saved-data?search=${encodeURIComponent(s)}` : '/api/dashboard/saved-data';
+    const res = await fetch(url);
+    const json = await res.json();
+    
+    const tbody = document.getElementById('saved-data-body');
+    const count = document.getElementById('saved-data-count');
+    
+    if (!tbody || !count) {
+      console.warn('[loadSavedData] Required elements not found (tbody or count)');
+      return;
+    }
+    
+    if (!json.data || !json.data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted)">Belum ada data</td></tr>';
+      count.textContent = '0';
+      return;
+    }
+    
+    tbody.innerHTML = json.data.slice(0, 500).map(d => `
+      <tr>
+        <td style="font-size: 11px; font-family: var(--mono)">${d.date}</td>
+        <td>${d.commodity}</td>
+        <td style="font-size: 11px">${d.province}</td>
+        <td style="font-size: 11px">${d.regency}</td>
+        <td style="color: var(--accent); font-family: var(--mono); font-size: 11px">Rp ${d.price ? parseFloat(d.price).toLocaleString() : '—'}</td>
+      </tr>
+    `).join('');
+    
+    count.textContent = json.count;
+  } catch (e) {
+    console.error('Error loading saved data:', e);
+    const tbody = document.getElementById('saved-data-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--red)">Error memuat data</td></tr>';
+  }
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let currentJobId   = null;
+let pollTimer      = null;
+let lastLogCount   = 0;
+let kabkotaTags    = [];
+let komList        = [];   // [{name, comcat_id}] dari API
+let provinsiMap    = {};   // name → id
+
+// ── Init: Load provinsi & komoditas dari API ───────────────────────────────
+async function init() {
+  console.log('[init] Starting initialization...');
+  
+  // Retry finding button if not immediately available
+  let retries = 0;
+  while (!document.getElementById('btn-start') && retries < 10) {
+    console.log('[init] btn-start not found, waiting... (retry', retries + 1, ')');
+    await new Promise(r => setTimeout(r, 100));
+    retries++;
+  }
+  
+  const btn = document.getElementById('btn-start');
+  console.log('[init] btn-start found:', !!btn, 'after', retries, 'retries');
+  
+  await Promise.all([loadProvinsi(), loadKomoditas()]);
+  console.log('[init] After loading data, calling updateKomCount()');
+  updateKomCount();
+}
+
+async function loadProvinsi() {
+  const wrap = document.getElementById('prov-wrap');
+  if (wrap) wrap.classList.add('loading');
+  try {
+    const res  = await fetch('/api/ref/provinsi');
+    const list = await res.json();
+    const sel  = document.getElementById('provinsi');
+    if (sel) {
+      sel.innerHTML = '';
+      list.forEach(p => {
+        provinsiMap[p.name] = p.id;
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        if (p.name === 'Sulawesi Tengah') opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.classList.remove('loading');
+    }
+    if (wrap) wrap.classList.remove('loading');
+    // Auto-load regency for default province
+    onProvinsiChange();
+  } catch(e) {
+    const sel = document.getElementById('provinsi');
+    if (sel) sel.innerHTML = '<option>⚠️ Gagal memuat</option>';
+    if (wrap) wrap.classList.remove('loading');
+  }
+}
+
+async function loadKomoditas() {
+  try {
+    const res = await fetch('/api/ref/komoditas');
+    komList = await res.json();
+    renderKomCheckboxes(komList);
+  } catch(e) {
+    const grid = document.getElementById('kom-grid');
+    if (grid) grid.innerHTML = '<div class="kom-loading" style="color:var(--red)">⚠️ Gagal memuat komoditas</div>';
+  }
+}
+
+async function onProvinsiChange() {
+  const provName = document.getElementById('provinsi').value;
+  const provId   = provinsiMap[provName];
+  if (!provId) return;
+
+  // Clear existing tags
+  kabkotaTags = [];
+  document.querySelectorAll('#kabkota-container .tag').forEach(t => t.remove());
+
+  const listDiv  = document.getElementById('regency-list');
+  const chipsDiv = document.getElementById('regency-chips');
+  listDiv.style.display = 'none';
+  chipsDiv.innerHTML = '';
+
+  try {
+    const res  = await fetch(`/api/ref/regency?province_id=${provId}`);
+    const regs = await res.json();
+    if (regs.length) {
+      regs.forEach(r => {
+        const chip = document.createElement('button');
+        chip.className = 'btn-xs';
+        chip.textContent = r.name;
+        chip.onclick = () => addTag(r.name);
+        chipsDiv.appendChild(chip);
+      });
+      listDiv.style.display = 'block';
+    }
+  } catch(e) {}
+}
+
+// ── Komoditas checkboxes ────────────────────────────────────────────────────
+function renderKomCheckboxes(list) {
+  console.log('[renderKomCheckboxes] Rendering', list.length, 'komoditas');
+  const grid = document.getElementById('kom-grid');
+  if (!grid) {
+    console.warn('[renderKomCheckboxes] kom-grid element not found');
+    return;
+  }
+  grid.innerHTML = '';
+  list.forEach(k => {
+    const lbl = document.createElement('label');
+    lbl.className = 'kom-item checked';
+    lbl.dataset.name = k.name;
+    lbl.innerHTML = `
+      <input type="checkbox" checked value="${k.name}">
+      <span class="kom-check"></span>
+      <span class="kom-label">${k.name}</span>
+    `;
+    lbl.onclick = () => toggleKom(lbl);
+    grid.appendChild(lbl);
+  });
+  console.log('[renderKomCheckboxes] All komoditas rendered, calling updateKomCount()');
+  updateKomCount();
+}
+
+function toggleKom(el) {
+  el.classList.toggle('checked');
+  el.querySelector('input').checked = el.classList.contains('checked');
+  updateKomCount();
+}
+function updateKomCount() {
+  const count = document.querySelectorAll('#kom-grid .kom-item.checked').length;
+  const countEl = document.getElementById('kom-count');
+  if (countEl) countEl.textContent = count;
+  
+  // Enable/disable button based on selection
+  const btn = document.getElementById('btn-start');
+  const shouldDisable = (count === 0);
+  console.log('[updateKomCount] count=' + count + ', btn=' + (btn ? 'FOUND' : 'NOT-FOUND') + ', setting disabled=' + shouldDisable);
+  if (btn) {
+    btn.disabled = shouldDisable;
+    console.log('[updateKomCount] ✓ Button disabled now=' + btn.disabled);
+  }
+}
+function checkAll()   { document.querySelectorAll('#kom-grid .kom-item').forEach(el => { el.classList.add('checked');    el.querySelector('input').checked = true;  }); updateKomCount(); }
+function uncheckAll() { document.querySelectorAll('#kom-grid .kom-item').forEach(el => { el.classList.remove('checked'); el.querySelector('input').checked = false; }); updateKomCount(); }
+
+// ── Kabkota tags ────────────────────────────────────────────────────────────
+function addTag(val) {
+  val = val.trim();
+  if (!val || kabkotaTags.includes(val)) return;
+  kabkotaTags.push(val);
+  const c   = document.getElementById('kabkota-container');
+  const inp = document.getElementById('kabkota-input');
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.innerHTML = `${val} <span class="tag-remove" onclick="removeTag(this,'${val.replace(/'/g,"\\'")}')">×</span>`;
+  c.insertBefore(tag, inp);
+}
+function removeTag(el, val) {
+  el.closest('.tag').remove();
+  kabkotaTags = kabkotaTags.filter(t => t !== val);
+  event.stopPropagation();
+}
+function handleKabkotaInput(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v) { addTag(v); e.target.value = ''; }
+  }
+  if (e.key === 'Backspace' && !e.target.value) {
+    const tags = document.querySelectorAll('#kabkota-container .tag');
+    if (tags.length) {
+      const last = tags[tags.length - 1];
+      const txt  = last.childNodes[0].textContent.trim();
+      kabkotaTags = kabkotaTags.filter(t => t !== txt);
+      last.remove();
+    }
+  }
+}
+
+// ── Scraping ────────────────────────────────────────────────────────────────
+function getSelectedKomoditas() {
+  return [...document.querySelectorAll('#kom-grid .kom-item.checked')]
+    .map(el => el.querySelector('input').value);
+}
+
+async function startScraping() {
+  console.log('[DEBUG] startScraping called');
+  const selected = getSelectedKomoditas();
+  console.log('[DEBUG] Selected komoditas:', selected, 'count:', selected.length);
+  if (!selected.length) { alert('Pilih minimal satu komoditas!'); return; }
+
+  const payload = {
+    tanggal_mulai    : document.getElementById('tgl-mulai').value,
+    tanggal_selesai  : document.getElementById('tgl-selesai').value,
+    provinsi         : document.getElementById('provinsi').value,
+    kabkota_target   : kabkotaTags,
+    tipe_laporan     : document.getElementById('tipe-laporan').value,
+    komoditas_filter : selected,   // filter list; [] = semua
+  };
+
+  resetUI();
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-cancel').style.display = 'block';
+  setStatus('running', 'Menginisialisasi...');
+
+  const res  = await fetch('/api/start', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  currentJobId = data.job_id;
+  lastLogCount = 0;
+  pollTimer = setInterval(pollStatus, 1200);
+}
+
+async function cancelScraping() {
+  if (!currentJobId) return;
+  if (!confirm('Batalkan scraping?')) return;
+  await fetch(`/api/cancel/${currentJobId}`, { method: 'POST' });
+}
+
+async function pollStatus() {
+  if (!currentJobId) return;
+  const res = await fetch(`/api/status/${currentJobId}`);
+  const d   = await res.json();
+
+  // Append new logs
+  d.logs.slice(lastLogCount).forEach(appendLog);
+  lastLogCount = d.logs.length;
+
+  // Progress
+  if (d.total > 0) {
+    const pct = Math.round(d.current / d.total * 100);
+    document.getElementById('prog-bar').style.width  = pct + '%';
+    document.getElementById('prog-label').textContent = `${d.current} / ${d.total} komoditas (${pct}%)`;
+    document.getElementById('progress-meta').textContent = pct + '%';
+  }
+  if (d.current_komoditas) {
+    document.getElementById('current-kom').style.display = 'block';
+    document.getElementById('kom-name').textContent = d.current_komoditas;
+  }
+  if (d.status === 'running') setStatus('running', 'Scraping berlangsung...');
+
+  if (d.status === 'done' || d.status === 'done_empty') {
+    clearInterval(pollTimer);
+    setStatus('done', 'Selesai!');
+    document.getElementById('btn-start').disabled  = false;
+    document.getElementById('btn-cancel').style.display = 'none';
+    document.getElementById('current-kom').style.display = 'none';
+    document.getElementById('prog-bar').style.width = '100%';
+    document.getElementById('stats-row').style.display = 'grid';
+    document.getElementById('stat-berhasil').textContent = d.berhasil;
+    document.getElementById('stat-gagal').textContent    = d.gagal.length;
+    document.getElementById('stat-rows').textContent     = d.total_rows;
+    if (d.total_rows > 0) {
+      document.getElementById('download-filename').textContent = d.filename;
+      document.getElementById('download-section').classList.add('show');
+      renderPreview(d.df_columns, d.df_preview);
+      renderKomStats(d.df_stats);
+    }
+  }
+  if (d.status === 'error') {
+    clearInterval(pollTimer);
+    setStatus('error', 'Error: ' + d.error);
+    document.getElementById('btn-start').disabled  = false;
+    document.getElementById('btn-cancel').style.display = 'none';
+  }
+}
+
+function downloadFile() {
+  if (currentJobId) window.location.href = `/api/download/${currentJobId}`;
+}
+
+// ── UI Helpers ──────────────────────────────────────────────────────────────
+function setStatus(state, text) {
+  document.getElementById('status-dot').className  = `status-dot ${state}`;
+  document.getElementById('status-text').textContent = text;
+}
+
+function appendLog(msg) {
+  const box = document.getElementById('log-box');
+  const div = document.createElement('div');
+  if      (msg.includes('✅') || msg.includes('🏁') || msg.includes('💾')) div.className = 'log-ok';
+  else if (msg.includes('❌') || msg.includes('Fatal') || msg.includes('Error'))   div.className = 'log-err';
+  else if (msg.includes('⚠️'))  div.className = 'log-warn';
+  else if (msg.includes('🚀') || msg.includes('📡') || msg.includes('📅') || msg.includes('🏙️')) div.className = 'log-info';
+  else                           div.className = 'log-muted';
+  div.textContent = msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function resetUI() {
+  const logBox = document.getElementById('log-box');
+  const progBar = document.getElementById('prog-bar');
+  const progLabel = document.getElementById('prog-label');
+  const progressMeta = document.getElementById('progress-meta');
+  const statsRow = document.getElementById('stats-row');
+  const downloadSection = document.getElementById('download-section');
+  const previewArea = document.getElementById('preview-area');
+  const statsKomCard = document.getElementById('stats-kom-card');
+  const currentKom = document.getElementById('current-kom');
+  
+  if (logBox) logBox.innerHTML = '';
+  if (progBar) progBar.style.width = '0%';
+  if (progLabel) progLabel.textContent = '—';
+  if (progressMeta) progressMeta.textContent = '';
+  if (statsRow) statsRow.style.display = 'none';
+  if (downloadSection) downloadSection.classList.remove('show');
+  if (previewArea) previewArea.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Data hasil scraping akan tampil di sini</div>`;
+  if (statsKomCard) statsKomCard.style.display = 'none';
+  if (currentKom) currentKom.style.display = 'none';
+  lastLogCount = 0;
+}
+
+function renderPreview(cols, rows) {
+  console.log('[renderPreview] cols:', cols, 'rows count:', rows ? rows.length : 0);
+  
+  if (!cols || !cols.length) {
+    console.warn('[renderPreview] No columns provided');
+    return;
+  }
+  
+  if (!rows || !rows.length) {
+    console.warn('[renderPreview] No rows provided');
+    document.getElementById('preview-area').innerHTML = `
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px">Preview Data</div>
+      <div style="color:var(--muted);text-align:center;padding:20px">⚠️ Tidak ada data preview (mungkin parsing gagal)</div>`;
+    return;
+  }
+  
+  const thead = cols.map(c => `<th>${c}</th>`).join('');
+  const tbody = rows.map(row =>
+    `<tr>${cols.map(c => `<td>${row[c] ?? ''}</td>`).join('')}</tr>`
+  ).join('');
+  document.getElementById('preview-area').innerHTML = `
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px">Preview 50 baris pertama (${rows.length} baris)</div>
+    <div class="table-wrap"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+}
+
+function renderKomStats(stats) {
+  if (!stats.length) return;
+  document.getElementById('stats-tbody').innerHTML = stats.map(s =>
+    `<tr><td>${s.Komoditas}</td><td style="font-family:var(--mono);color:var(--accent)">${s['Jumlah Baris']}</td></tr>`
+  ).join('');
+  document.getElementById('stats-kom-card').style.display = 'block';
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!-- TAB 3: DASHBOARD -->
+<div id="dashboard-tab" class="tab-content h-full">
+  <!-- File Selector -->
+  <div class="mb-4 glass rounded-xl p-4">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-database text-primary"></i>
+        <span class="text-sm font-medium text-white">Pilih Data:</span>
+      </div>
+      <select id="dashboard-file-select" class="flex-1 px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-primary transition-all" onchange="loadDashboardAnalytics()">
+        <option value="">-- Pilih file dari Storage --</option>
+      </select>
+      <button onclick="loadDashboardAnalytics()" class="px-4 py-2 bg-primary hover:bg-primary-light text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+        <i class="fas fa-sync-alt"></i> Analisis
+      </button>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div id="dashboard-empty" class="h-[calc(100%-80px)] flex items-center justify-center">
+    <div class="text-center text-gray-500">
+      <div class="text-6xl mb-4 opacity-50">📊</div>
+      <p class="text-lg font-medium">Pilih data dari Storage untuk melihat analisis</p>
+      <p class="text-sm mt-2">Dashboard akan menampilkan metrik, tren, dan proyeksi harga</p>
+    </div>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div id="dashboard-content" class="hidden space-y-4 h-[calc(100%-80px)] overflow-y-auto custom-scrollbar pb-4">
+    
+    <!-- 1. RINGKASAN EKSEKUTIF - KPI Cards -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <i class="fas fa-chart-line text-primary"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Ringkasan Eksekutif</h2>
+            <p class="text-xs text-gray-500">Indikator perubahan harga & tren momentum</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 3 Gainers & Losers -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <!-- Top Gainers -->
+        <div class="glass rounded-xl p-4 border border-success/20">
+          <h3 class="text-sm font-semibold text-success mb-3 flex items-center gap-2">
+            <i class="fas fa-arrow-trend-up"></i> Top 3 Kenaikan (Gainers)
+          </h3>
+          <div id="top-gainers" class="space-y-2">
+            <div class="text-xs text-gray-500">Memuat data...</div>
+          </div>
+        </div>
+        <!-- Top Losers -->
+        <div class="glass rounded-xl p-4 border border-danger/20">
+          <h3 class="text-sm font-semibold text-danger mb-3 flex items-center gap-2">
+            <i class="fas fa-arrow-trend-down"></i> Top 3 Penurunan (Losers)
+          </h3>
+          <div id="top-losers" class="space-y-2">
+            <div class="text-xs text-gray-500">Memuat data...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price Index Sparkline -->
+      <div class="glass rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-white">Indeks Harga Pangan Agregat (30 Hari)</h3>
+          <span id="price-index-value" class="text-lg font-bold text-primary">--</span>
+        </div>
+        <div class="h-[120px]">
+          <canvas id="sparkline-chart" data-chart-type="sparkline"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. TREN HISTORIS & VOLATILITAS -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
+            <i class="fas fa-chart-area text-accent"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Tren Historis & Volatilitas</h2>
+            <p class="text-xs text-gray-500">Analisis time-series dengan Bollinger Bands</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <select id="trend-komoditas" class="px-3 py-1.5 bg-dark-700 border border-dark-600 rounded-lg text-xs text-gray-300" onchange="updateTrendChart()">
+            <option value="">Pilih Komoditas</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Wilayah Selection -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-400">Pilih Wilayah untuk Perbandingan:</span>
+          <div class="flex gap-2">
+            <button onclick="selectAllWilayah()" class="text-[10px] px-2 py-1 bg-dark-600 hover:bg-primary/20 text-gray-400 hover:text-primary rounded transition-colors">Semua</button>
+            <button onclick="clearAllWilayah()" class="text-[10px] px-2 py-1 bg-dark-600 hover:bg-danger/20 text-gray-400 hover:text-danger rounded transition-colors">Clear</button>
+          </div>
+        </div>
+        <div id="trend-wilayah-container" class="flex flex-wrap gap-2 max-h-[80px] overflow-y-auto p-2 bg-dark-700/50 border border-dark-600 rounded-lg custom-scrollbar">
+          <div class="text-xs text-gray-500">Pilih komoditas terlebih dahulu...</div>
+        </div>
+      </div>
+      
+      <div class="h-[300px]">
+        <canvas id="trend-chart" data-chart-type="trend"></canvas>
+      </div>
+      <div class="mt-3 flex items-center gap-4 text-xs">
+        <div class="flex items-center gap-1">
+          <div class="w-3 h-3 rounded-full bg-primary"></div>
+          <span class="text-gray-400">Harga</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-3 h-3 rounded-full bg-warning/50"></div>
+          <span class="text-gray-400">Bollinger Bands (Volatilitas)</span>
+        </div>
+        <div id="ews-alert" class="hidden ml-auto px-3 py-1 bg-danger/20 border border-danger/30 rounded-full text-danger font-medium">
+          <i class="fas fa-exclamation-triangle mr-1"></i> EWS: Intervensi Diperlukan
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ANALISIS RANTAI PASOK -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-success/20 to-accent/20 flex items-center justify-center">
+            <i class="fas fa-network-wired text-success"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Analisis Rantai Pasok</h2>
+            <p class="text-xs text-gray-500">Matriks korelasi spasial antar wilayah</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Correlation Matrix -->
+        <div class="glass rounded-xl p-4">
+          <h3 class="text-sm font-semibold text-white mb-3">Disparitas Harga Antar Wilayah</h3>
+          <div id="correlation-matrix" class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead id="correlation-head"></thead>
+              <tbody id="correlation-body"></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Distribution Map -->
+        <div class="glass rounded-xl p-4">
+          <h3 class="text-sm font-semibold text-white mb-3">Distribusi Harga per Wilayah</h3>
+          <div class="h-[200px]">
+            <canvas id="distribution-chart" data-chart-type="distribution"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. RUANG PROYEKSI - FORECAST -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-warning/20 to-accent/20 flex items-center justify-center">
+            <i class="fas fa-wand-magic-sparkles text-warning"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Proyeksi Harga (Forecast)</h2>
+            <p class="text-xs text-gray-500">Prediksi 30 hari ke depan menggunakan time-series</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <select id="forecast-komoditas" class="px-3 py-1.5 bg-dark-700 border border-dark-600 rounded-lg text-xs text-gray-300" onchange="updateForecastChart()">
+            <option value="">Pilih Komoditas</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Wilayah Selection for Forecast -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-400">Pilih Wilayah untuk Perbandingan Proyeksi:</span>
+          <div class="flex gap-2">
+            <button onclick="selectAllWilayahForecast()" class="text-[10px] px-2 py-1 bg-dark-600 hover:bg-primary/20 text-gray-400 hover:text-primary rounded transition-colors">Semua</button>
+            <button onclick="clearAllWilayahForecast()" class="text-[10px] px-2 py-1 bg-dark-600 hover:bg-danger/20 text-gray-400 hover:text-danger rounded transition-colors">Clear</button>
+          </div>
+        </div>
+        <div id="forecast-wilayah-container" class="flex flex-wrap gap-2 max-h-[60px] overflow-y-auto p-2 bg-dark-700/50 border border-dark-600 rounded-lg custom-scrollbar">
+          <div class="text-xs text-gray-500">Pilih komoditas terlebih dahulu...</div>
+        </div>
+      </div>
+      
+      <div class="h-[250px]">
+        <canvas id="forecast-chart" data-chart-type="forecast"></canvas>
+      </div>
+      <div class="mt-3 flex items-center gap-4 text-xs">
+        <div class="flex items-center gap-1">
+          <div class="w-3 h-3 rounded-full bg-primary"></div>
+          <span class="text-gray-400">Data Historis</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-3 h-3 rounded-full bg-warning border border-dashed border-warning"></div>
+          <span class="text-gray-400">Proyeksi (Forecast)</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-3 h-3 rounded-full bg-success/30 border border-success"></div>
+          <span class="text-gray-400">Confidence Interval</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

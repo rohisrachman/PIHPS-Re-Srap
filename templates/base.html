@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}PIHPS BI — Dashboard{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0f0f1a; }
+    .glass { background: rgba(26, 26, 46, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.1); }
+    .glass-hover:hover { background: rgba(45, 45, 85, 0.6); border-color: rgba(139, 92, 246, 0.3); }
+    .gradient-text { background: linear-gradient(135deg, #8b5cf6 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .glow { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+    .sidebar-item.active { background: linear-gradient(90deg, rgba(139, 92, 246, 0.2) 0%, transparent 100%); border-left: 3px solid #8b5cf6; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1a1a2e; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #363668; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #8b5cf6; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); } 50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); } }
+    .ai-glow { animation: pulse-glow 2s infinite; }
+    .fixed-table-container { height: calc(100vh - 300px); min-height: 400px; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-dark-900 text-gray-300 min-h-screen flex">
+  
+  <!-- Sidebar -->
+  <aside class="w-20 bg-dark-800 border-r border-dark-600 flex flex-col items-center py-6 fixed h-full z-50">
+    <div class="mb-8">
+      <div class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center glow p-2">
+        <img src="{{ url_for('static', filename='img/commodity.png') }}" alt="PIHPS Logo" class="w-full h-full object-contain">
+      </div>
+    </div>
+    
+    <nav class="flex flex-col gap-2 w-full">
+      <button class="sidebar-item active w-full py-4 flex flex-col items-center gap-1 text-primary transition-all" data-tab="scrape">
+        <i class="fas fa-rocket text-lg"></i>
+        <span class="text-[10px]">Scrape</span>
+      </button>
+      <button class="sidebar-item w-full py-4 flex flex-col items-center gap-1 text-gray-500 hover:text-primary transition-all" data-tab="storage">
+        <i class="fas fa-database text-lg"></i>
+        <span class="text-[10px]">Storage</span>
+      </button>
+      <button class="sidebar-item w-full py-4 flex flex-col items-center gap-1 text-gray-500 hover:text-primary transition-all" data-tab="dashboard">
+        <i class="fas fa-chart-line text-lg"></i>
+        <span class="text-[10px]">Dashboard</span>
+      </button>
+    </nav>
+    
+    <div class="mt-auto">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+        <i class="fas fa-user text-white text-sm"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 ml-20 p-6 overflow-hidden">
+    <div class="max-w-[1600px] mx-auto h-full">
+      <!-- Top Bar -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <div class="text-sm text-gray-500 mb-1">Personal account / Dashboard</div>
+          <h1 class="text-2xl font-bold text-white">PIHPS BI Dashboard</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2 px-4 py-2 glass rounded-full">
+            <i class="fas fa-circle text-success text-xs animate-pulse"></i>
+            <span class="text-sm text-gray-300">Live API</span>
+          </div>
+          <button class="w-10 h-10 glass rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+            <i class="fas fa-cog"></i>
+          </button>
+          <button class="w-10 h-10 glass rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+            <i class="fas fa-bell"></i>
+          </button>
+        </div>
+      </div>
+      
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

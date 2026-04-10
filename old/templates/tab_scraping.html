@@ -1,0 +1,143 @@
+<!-- Content: Scraping Tab -->
+  <div class="grid" style="grid-template-columns: 380px 1fr; gap: 18px; align-items: start;">
+
+    <!-- ── LEFT: Form ── -->
+    <div class="card" style="animation-delay:.05s; height: fit-content;">
+      <div class="card-header">
+        <span>⚙️</span><h2>Parameter Scraping</h2>
+      </div>
+      <div class="card-body" style="padding: 14px;">
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Periode (YYYY-MM-DD)</label>
+          <div class="date-row">
+            <input type="date" id="tgl-mulai"   value="2026-03-01" style="font-size: 12px; padding: 6px 8px;">
+            <input type="date" id="tgl-selesai" value="2026-04-07" style="font-size: 12px; padding: 6px 8px;">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Provinsi</label>
+          <div class="select-wrap" id="prov-wrap">
+            <select id="provinsi" onchange="onProvinsiChange()" class="loading" style="font-size: 12px; padding: 6px 8px;">
+              <option value="">⏳ Memuat...</option>
+            </select>
+            <div class="select-spinner"></div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Kabupaten / Kota <span style="color:var(--muted);font-size:9px">(partial match)</span></label>
+          <div class="kabkota-container" id="kabkota-container" onclick="document.getElementById('kabkota-input').focus()" style="min-height: 40px; padding: 6px 8px;">
+            <input class="kabkota-input" id="kabkota-input" placeholder="Ketik, tekan Enter..." onkeydown="handleKabkotaInput(event)" style="font-size: 12px;">
+          </div>
+          <div class="kabkota-hint" style="font-size: 10px; margin-top: 3px;">Kosong = semua kab/kota</div>
+          <div id="regency-list" style="margin-top:6px;display:none">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--mono)">Tersedia:</div>
+            <div id="regency-chips" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Tipe Laporan</label>
+          <select id="tipe-laporan" style="font-size: 12px; padding: 6px 8px;">
+            <option value="1">Harian (tipe=1)</option>
+            <option value="2" selected>Mingguan (tipe=2)</option>
+            <option value="3">Bulanan (tipe=3)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Komoditas</label>
+          <div class="kom-toolbar" style="gap: 4px; margin-bottom: 6px;">
+            <button class="btn-xs" onclick="checkAll()" style="font-size: 10px; padding: 3px 8px;">Pilih Semua</button>
+            <button class="btn-xs" onclick="uncheckAll()" style="font-size: 10px; padding: 3px 8px;">Hapus Semua</button>
+          </div>
+          <div class="kom-grid" id="kom-grid" style="max-height: 160px;">
+            <div class="kom-loading">⏳ Memuat...</div>
+          </div>
+          <div class="kom-meta" style="font-size: 10px; margin-top: 4px;"><span id="kom-count">0</span> dipilih</div>
+        </div>
+
+        <button class="btn-submit" id="btn-start" onclick="startScraping()" disabled style="font-size: 13px; padding: 10px; margin-top: 8px;">🚀 Mulai</button>
+        <button class="btn-cancel" id="btn-cancel" onclick="cancelScraping()" style="font-size: 12px; padding: 8px; margin-top: 5px; width: 100%;">⛔ Batalkan</button>
+
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Output Layout ── -->
+    <div style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
+
+      <!-- ── TOP: Progress + Stats (2 column) ── -->
+      <div style="display: grid; grid-template-columns: 1fr 140px; gap: 12px;">
+        <!-- Progress Card -->
+        <div class="card" style="animation-delay:.1s;">
+          <div class="card-header" style="padding: 10px 12px;"><span>📡</span><h2 style="font-size: 11px;">Progress & Log</h2></div>
+          <div class="card-body" style="padding: 10px;">
+            <div class="progress-status" style="gap: 6px; margin-bottom: 8px;">
+              <div class="status-dot" id="status-dot"></div>
+              <div class="status-text" id="status-text" style="font-size: 11px;">Siap</div>
+              <div class="progress-meta" id="progress-meta" style="font-size: 9px;"></div>
+            </div>
+            <div class="prog-bar-bg"><div class="prog-bar" id="prog-bar"></div></div>
+            <div class="prog-label" id="prog-label" style="font-size: 10px; margin: 4px 0;">—</div>
+            <div class="current-kom" id="current-kom" style="font-size: 10px;">⏳: <span id="kom-name">—</span></div>
+            <div class="log-box" id="log-box" style="min-height: 50px; max-height: 50px; overflow-y: auto; font-size: 9px;">
+              <span class="log-muted">// Atur & Mulai</span>
+            </div>
+            <div class="download-section" id="download-section" style="display: none; margin-top: 8px; text-align: center;">
+              <small style="font-size: 9px;">✅ Siap unduh</small><br>
+              <button class="btn-download" onclick="downloadFile()" style="font-size: 11px; padding: 6px 10px; margin-top: 4px;">⬇ Download</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Boxes (Right) -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="stat-box" id="stat-berhasil-box" style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; display: none;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--green);" id="stat-berhasil">0</div>
+            <div style="font-size: 9px; color: var(--muted); margin-top: 2px;">BERHASIL</div>
+          </div>
+          <div class="stat-box" id="stat-gagal-box" style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; display: none;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--red);" id="stat-gagal">0</div>
+            <div style="font-size: 9px; color: var(--muted); margin-top: 2px;">GAGAL</div>
+          </div>
+          <div class="stat-box" id="stat-rows-box" style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; display: none;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--green);" id="stat-rows">0</div>
+            <div style="font-size: 9px; color: var(--muted); margin-top: 2px;">TOTAL BARIS</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MIDDLE: Preview Data (Scrollable) ── -->
+      <div class="card" style="animation-delay:.15s; flex: 1; display: flex; flex-direction: column; min-height: 240px;">
+        <div class="card-header" style="padding: 10px 12px; flex-shrink: 0;"><span>📊</span><h2 style="font-size: 11px;">Preview Data</h2></div>
+        <div class="card-body" style="padding: 10px; overflow-y: auto; flex: 1;">
+          <div id="preview-area">
+            <div class="empty-state" style="font-size: 12px;"><div class="icon">📋</div>Data akan tampil di sini</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BOTTOM: Rekap (Collapsible) ── -->
+      <div class="card" id="stats-kom-card" style="display:none; animation-delay:.2s; flex-shrink: 0;">
+        <div class="card-header" style="padding: 10px 12px;"><span>📈</span><h2 style="font-size: 11px;">Rekap Komoditas</h2></div>
+        <div class="card-body" style="padding: 8px; max-height: 140px; overflow-y: auto;">
+          <div class="stats-table-wrap table-wrap">
+            <table style="font-size: 11px;">
+              <thead><tr><th style="padding: 6px;">Komoditas</th><th style="padding: 6px;">Baris</th></tr></thead>
+              <tbody id="stats-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BOTTOM: Buttons ── -->
+      <div style="display: flex; gap: 10px; flex-shrink: 0;">
+        <button class="btn-xs" onclick="downloadFile()" id="btn-simpan" style="flex: 1; background: var(--accent); color: #000; font-weight: 600; padding: 10px; font-size: 12px; border: none; border-radius: 8px; cursor: pointer; display: none;">💾 Simpan</button>
+        <button class="btn-xs" onclick="downloadFile()" id="btn-download-final" style="flex: 1; background: var(--accent2); color: #fff; font-weight: 600; padding: 10px; font-size: 12px; border: none; border-radius: 8px; cursor: pointer; display: none;">⬇ Download</button>
+      </div>
+
+    </div>
+
+  </div>

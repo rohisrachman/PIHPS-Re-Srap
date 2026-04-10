@@ -1,0 +1,255 @@
+<!-- TAB 1: SCRAPE DATA -->
+<div id="scrape-tab" class="tab-content active h-full">
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 h-[calc(100vh-140px)]">
+    
+    <!-- KIRI: Fixed Table Preview -->
+    <div class="glass rounded-2xl overflow-hidden flex flex-col h-full">
+      <div class="px-6 py-4 border-b border-dark-600 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <i class="fas fa-table text-primary"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Data Preview</h2>
+            <p class="text-xs text-gray-500">Preview 50 baris pertama</p>
+          </div>
+        </div>
+        <div id="download-section" class="hidden flex gap-2">
+          <button onclick="saveJobToStorage()" class="px-4 py-2 bg-success hover:bg-success-light text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2">
+            <i class="fas fa-save"></i>
+            <span>Simpan Data</span>
+          </button>
+          <button onclick="downloadFile()" class="px-4 py-2 bg-primary hover:bg-primary-light text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2">
+            <i class="fas fa-download"></i>
+            <span id="download-filename">data.xlsx</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Fixed Table Container -->
+      <div class="flex-1 overflow-hidden relative">
+        <div id="preview-area" class="absolute inset-0 overflow-auto custom-scrollbar">
+          <div class="flex items-center justify-center h-full text-gray-500">
+            <div class="text-center">
+              <div class="text-5xl mb-4 opacity-50">📊</div>
+              <p class="text-sm">Data hasil scraping akan tampil di sini</p>
+              <p class="text-xs mt-2 text-gray-600">Mulai scraping untuk melihat preview</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stats Footer -->
+      <div id="stats-row" class="hidden border-t border-dark-600 p-4">
+        <div class="grid grid-cols-3 gap-4">
+          <div class="glass rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">Berhasil</div>
+            <div id="stat-berhasil" class="text-xl font-bold text-success">0</div>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">Gagal</div>
+            <div id="stat-gagal" class="text-xl font-bold text-danger">0</div>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">Total Baris</div>
+            <div id="stat-rows" class="text-xl font-bold text-primary">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KANAN: Parameter & AI -->
+    <div class="flex flex-col gap-4 h-full overflow-hidden">
+      
+      <!-- Progress Card (Compact) -->
+      <div class="glass rounded-2xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-gray-600"></div>
+            <span id="status-text" class="font-medium text-xs text-gray-300">Siap</span>
+          </div>
+          <span id="progress-meta" class="text-[10px] font-bold text-primary"></span>
+        </div>
+        <div class="w-full h-1 bg-dark-700 rounded-full overflow-hidden mb-1.5">
+          <div id="prog-bar" class="h-full w-0 bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-300"></div>
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-500 mb-2">
+          <span id="prog-label">—</span>
+          <span id="current-kom" class="hidden text-primary">Memproses: <span id="kom-name" class="font-medium"></span></span>
+        </div>
+        <!-- Mini Log -->
+        <div id="log-box" class="h-[40px] overflow-y-auto text-[10px] font-mono text-gray-500 flex flex-col gap-0.5 custom-scrollbar"></div>
+      </div>
+
+      <!-- Parameter Card -->
+      <div class="glass rounded-2xl overflow-hidden flex-1 flex flex-col">
+        <div class="px-5 py-3 border-b border-dark-600">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i class="fas fa-sliders-h text-primary"></i> Parameter
+          </h2>
+        </div>
+        <div class="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+          
+          <!-- Periode -->
+          <div>
+            <label class="block text-xs text-gray-500 mb-2 uppercase" for="tgl-mulai">Periode Waktu</label>
+            <div class="flex gap-2">
+              <input type="date" id="tgl-mulai" value="2024-01-01" class="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-xs text-gray-300 focus:outline-none focus:border-primary transition-all">
+              <input type="date" id="tgl-selesai" value="2024-12-31" class="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-xs text-gray-300 focus:outline-none focus:border-primary transition-all">
+            </div>
+          </div>
+
+          <!-- Provinsi -->
+          <div>
+            <label class="block text-xs text-gray-500 mb-2 uppercase" for="provinsi">Provinsi</label>
+            <select id="provinsi" class="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-xs text-gray-300 focus:outline-none focus:border-primary transition-all">
+              <option value="">— Pilih Provinsi —</option>
+            </select>
+          </div>
+
+          <!-- Kab/Kota -->
+          <div>
+            <label class="block text-xs text-gray-500 mb-2 uppercase" for="kabkota-input">Kab/Kota (opsional)</label>
+            <div id="recommendation-area" class="hidden mb-2">
+              <div class="text-xs text-primary mb-1"><i class="fas fa-lightbulb mr-1"></i> Rekomendasi</div>
+              <div id="recommendation-chips" class="flex flex-wrap gap-1"></div>
+            </div>
+            <div id="kabkota-container" class="flex flex-wrap gap-1 p-2 bg-dark-700 border border-dark-600 rounded-lg min-h-[42px]">
+              <input type="text" id="kabkota-input" placeholder="Ketik kab/kota, Enter..." class="flex-1 min-w-[120px] bg-transparent border-none text-xs text-gray-300 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Tipe Laporan -->
+          <div>
+            <label class="block text-xs text-gray-500 mb-2 uppercase" for="tipe-laporan">Tipe Laporan</label>
+            <select id="tipe-laporan" class="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-xs text-gray-300 focus:outline-none focus:border-primary transition-all">
+              <option value="1">Harian</option>
+              <option value="2" selected>Mingguan</option>
+              <option value="3">Bulanan</option>
+            </select>
+          </div>
+
+          <!-- Komoditas -->
+          <div>
+            <label class="block text-xs text-gray-500 mb-2 uppercase" id="komoditas-label">Komoditas</label>
+            <div class="flex flex-wrap gap-1 mb-2">
+              <button onclick="selectAllKom()" class="px-2 py-1 text-[10px] bg-dark-600 hover:bg-primary/20 text-gray-400 hover:text-primary rounded transition-colors">Semua</button>
+              <button onclick="selectBeras()" class="px-2 py-1 text-[10px] bg-dark-600 hover:bg-primary/20 text-gray-400 hover:text-primary rounded transition-colors">Beras</button>
+              <button onclick="selectDagingTelur()" class="px-2 py-1 text-[10px] bg-dark-600 hover:bg-primary/20 text-gray-400 hover:text-primary rounded transition-colors">Daging</button>
+              <button onclick="clearAllKom()" class="px-2 py-1 text-[10px] bg-dark-600 hover:bg-danger/20 text-gray-400 hover:text-danger rounded transition-colors">Clear</button>
+            </div>
+            <div id="kom-grid" class="kom-grid max-h-[160px] overflow-y-auto p-2 bg-dark-700 border border-dark-600 rounded-lg custom-scrollbar">
+              <div class="text-xs text-gray-500 text-center py-4">Memuat komoditas...</div>
+            </div>
+            <div class="text-xs text-gray-500 mt-2 text-right">
+              <span id="kom-count" class="text-primary font-medium">0</span> / <span id="kom-total">0</span> dipilih
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="glass rounded-2xl p-4">
+        <div class="flex flex-col gap-2">
+          <button id="btn-start" onclick="startScraping()" class="w-full py-3 px-4 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+            <i class="fas fa-rocket"></i> Mulai Scraping
+          </button>
+          <button id="btn-cancel" onclick="cancelScraping()" class="hidden w-full py-3 px-4 bg-dark-700 border border-danger text-danger font-semibold text-sm rounded-xl hover:bg-danger/10 transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-stop"></i> Batalkan
+          </button>
+        </div>
+      </div>
+
+      <!-- AI Assistant Button -->
+      <button onclick="openAIPopup()" class="glass rounded-2xl p-4 w-full glass-hover transition-all group">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center ai-glow group-hover:scale-110 transition-transform">
+            <i class="fas fa-robot text-white text-sm"></i>
+          </div>
+          <div class="flex-1 text-left">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i class="fas fa-sparkles text-accent"></i> AI Assistant
+            </h2>
+            <p class="text-[10px] text-gray-400">Klik untuk membuka chat</p>
+          </div>
+          <i class="fas fa-external-link-alt text-gray-500 text-xs"></i>
+        </div>
+      </button>
+      
+    </div>
+  </div>
+</div>
+
+<!-- AI Assistant Popup Modal -->
+<div id="ai-popup" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+  <div class="glass rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+    <!-- Header -->
+    <div class="px-5 py-4 border-b border-dark-600 bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center ai-glow">
+          <i class="fas fa-robot text-white text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-semibold text-white">AI Assistant</h2>
+          <p class="text-xs text-gray-400">PIHPS Data Analysis</p>
+        </div>
+      </div>
+      <button onclick="closeAIPopup()" class="w-8 h-8 rounded-full bg-dark-700 hover:bg-dark-600 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+    
+    <!-- Chat Area -->
+    <div id="ai-chat-area" class="h-[400px] overflow-y-auto p-4 space-y-3 custom-scrollbar bg-dark-900/50">
+      <!-- Welcome Message -->
+      <div class="flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex-shrink-0 flex items-center justify-center">
+          <i class="fas fa-robot text-white text-xs"></i>
+        </div>
+        <div class="flex-1">
+          <div class="glass rounded-xl rounded-tl-sm p-3">
+            <p class="text-sm text-gray-300">Halo! Saya AI Assistant untuk PIHPS Dashboard. Saya bisa membantu Anda dengan:</p>
+            <ul class="text-xs text-gray-400 mt-2 space-y-1 ml-4">
+              <li>• Panduan penggunaan dashboard</li>
+              <li>• Informasi komoditas</li>
+              <li>• Analisis data harga</li>
+              <li>• Troubleshooting</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Input Area -->
+    <div class="p-4 border-t border-dark-600 bg-dark-800/50">
+      <div class="flex gap-2">
+        <input type="text" id="ai-popup-input" placeholder="Tanyakan sesuatu tentang PIHPS..." 
+               class="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-xl text-sm text-gray-300 focus:outline-none focus:border-primary transition-all"
+               onkeydown="if(event.key==='Enter') sendToAIPopup()">
+        <button onclick="sendToAIPopup()" class="px-4 py-3 bg-primary hover:bg-primary-light text-white rounded-xl transition-all flex items-center gap-2">
+          <i class="fas fa-paper-plane text-sm"></i>
+          <span class="text-sm font-medium">Kirim</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Creator Info -->
+    <div class="px-4 py-2 bg-dark-900/80 border-t border-dark-600/50 text-center">
+      <p class="text-[10px] text-gray-500">Dibuat oleh <span class="text-primary font-medium">Rohis Rachman</span></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Set default dates: one year ago to today
+  const today = new Date();
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+  
+  // Format YYYY-MM-DD
+  const formatDate = (date) => date.toISOString().split('T')[0];
+  
+  document.getElementById('tgl-mulai').value = formatDate(oneYearAgo);
+  document.getElementById('tgl-selesai').value = formatDate(today);
+</script>

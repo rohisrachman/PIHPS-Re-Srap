@@ -1,0 +1,25 @@
+<!-- Content: Saved Data Tab -->
+<div style="margin-bottom: 12px; display: flex; gap: 8px;">
+  <input type="text" id="search-data" placeholder="Cari komoditas..." 
+         style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+  <button class="btn-xs" onclick="loadSavedData()">🔄 Refresh</button>
+</div>
+<div class="table-wrap" style="max-height: 600px">
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>Komoditas</th>
+        <th>Provinsi</th>
+        <th>Kab/Kota</th>
+        <th>Harga</th>
+      </tr>
+    </thead>
+    <tbody id="saved-data-body">
+      <tr><td colspan="5" style="text-align: center; color: var(--muted)">⏳ Memuat data...</td></tr>
+    </tbody>
+  </table>
+</div>
+<div style="margin-top: 12px; font-size: 11px; color: var(--muted); font-family: var(--mono);">
+  Total: <span id="saved-data-count">0</span> records
+</div>

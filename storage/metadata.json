@@ -1,0 +1,62 @@
+{
+  "eeeddb89-877": {
+    "id": "eeeddb89-877",
+    "name": "harga_pangan_2024-01-01_sd_2024-12-31.xlsx",
+    "timestamp": "2026-04-09T16:45:23.588673",
+    "rows": 40,
+    "komoditas_count": 10,
+    "komoditas": [
+      "Beras",
+      "Daging Ayam",
+      "Daging Sapi",
+      "Telur Ayam",
+      "Bawang Merah",
+      "Bawang Putih",
+      "Cabai Merah",
+      "Cabai Rawit",
+      "Minyak Goreng",
+      "Gula Pasir"
+    ],
+    "provinsi": "Unknown"
+  },
+  "21c8d654-ad2": {
+    "id": "21c8d654-ad2",
+    "name": "harga_pangan_2025-04-09_sd_2026-04-09.xlsx",
+    "timestamp": "2026-04-10T02:36:54.761071",
+    "rows": 70,
+    "komoditas_count": 10,
+    "komoditas": [
+      "Beras",
+      "Daging Ayam",
+      "Daging Sapi",
+      "Telur Ayam",
+      "Bawang Merah",
+      "Bawang Putih",
+      "Cabai Merah",
+      "Cabai Rawit",
+      "Minyak Goreng",
+      "Gula Pasir"
+    ],
+    "provinsi": "Papua"
+  },
+  "69fdced7-d10": {
+    "id": "69fdced7-d10",
+    "name": "harga_pangan_2020-04-09_sd_2026-04-09.xlsx",
+    "timestamp": "2026-04-10T08:30:29.510269",
+    "rows": 40,
+    "komoditas_count": 10,
+    "komoditas": [
+      "Beras",
+      "Daging Ayam",
+      "Daging Sapi",
+      "Telur Ayam",
+      "Bawang Merah",
+      "Bawang Putih",
+      "Cabai Merah",
+      "Cabai Rawit",
+      "Minyak Goreng",
+      "Gula Pasir"
+    ],
+    "provinsi": "Sulawesi Tengah"
+  }
+}
