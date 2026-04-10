@@ -2,7 +2,8 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f1a">
   <title>{% block title %}PIHPS BI — Dashboard{% endblock %}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
@@ -27,6 +28,29 @@
     @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); } 50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); } }
     .ai-glow { animation: pulse-glow 2s infinite; }
     .fixed-table-container { height: calc(100vh - 300px); min-height: 400px; }
+    
+    /* Simple Responsive - Desktop First */
+    
+    /* Base Chart Containers */
+    .chart-container { position: relative; height: 300px; width: 100%; }
+    .chart-container-sm { height: 120px; }
+    .chart-container-md { height: 200px; }
+    .chart-container-lg { height: 300px; }
+    
+    /* Only apply mobile adjustments on small screens */
+    @media (max-width: 768px) {
+      main { padding: 1rem; }
+      .chart-container { height: 220px; }
+      .chart-container-sm { height: 100px; }
+      .chart-container-md { height: 160px; }
+      .chart-container-lg { height: 250px; }
+    }
+    
+    /* Tablet adjustments */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .chart-container { height: 250px; }
+      .chart-container-lg { height: 280px; }
+    }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
@@ -54,12 +78,6 @@
         <span class="text-[10px]">Dashboard</span>
       </button>
     </nav>
-    
-    <div class="mt-auto">
-      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-        <i class="fas fa-user text-white text-sm"></i>
-      </div>
-    </div>
   </aside>
 
   <!-- Main Content -->
@@ -71,17 +89,9 @@
           <div class="text-sm text-gray-500 mb-1">Personal account / Dashboard</div>
           <h1 class="text-2xl font-bold text-white">PIHPS BI Dashboard</h1>
         </div>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2 px-4 py-2 glass rounded-full">
-            <i class="fas fa-circle text-success text-xs animate-pulse"></i>
-            <span class="text-sm text-gray-300">Live API</span>
-          </div>
-          <button class="w-10 h-10 glass rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
-            <i class="fas fa-cog"></i>
-          </button>
-          <button class="w-10 h-10 glass rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
-            <i class="fas fa-bell"></i>
-          </button>
+        <div class="flex items-center gap-2 px-4 py-2 glass rounded-full">
+          <i class="fas fa-circle text-success text-xs animate-pulse"></i>
+          <span class="text-sm text-gray-300">Live API</span>
         </div>
       </div>
       
