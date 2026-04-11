@@ -8,6 +8,7 @@ let komoditasList = [];
 let currentJobId = null;
 let pollTimer = null;
 let lastLogCount = 0;
+let csrfToken = null;
 
 // Data shape validators
 const EXPECTED_SHAPES = new Map();
@@ -17,9 +18,21 @@ async function init() {
   setupTabNavigation();
   await loadProvinsi();
   await loadKomoditas();
+  await fetchCSRFToken();
   loadStorageList();
   loadDashboard();
   loadDashboardFileSelector();
+}
+
+// ── CSRF Token ───────────────────────────────────────────────────
+async function fetchCSRFToken() {
+  try {
+    const response = await fetch('/api/csrf-token');
+    const data = await response.json();
+    csrfToken = data.csrf_token;
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+  }
 }
 
 // ── TAB NAVIGATION ───────────────────────────────────────────────
@@ -312,9 +325,13 @@ async function startScraping() {
   setStatus('running', 'Menginisialisasi...');
 
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
     const res = await fetch('/api/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify(payload),
     });
     const data = await res.json();

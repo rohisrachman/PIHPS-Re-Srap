@@ -33,6 +33,139 @@ warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
 
+# ── Security Headers Middleware ─────────────────────────────────────
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    # Content Security Policy - Restrict sources for scripts, styles, etc.
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://www.bi.go.id; "
+        "frame-ancestors 'none';"
+    )
+    
+    # Prevent clickjacking
+    response.headers['X-Frame-Options'] = 'DENY'
+    
+    # Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Referrer policy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    # Permissions policy
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    
+    return response
+
+# ── Input Validation & Sanitization ─────────────────────────────────
+import html
+
+def sanitize_input(text, max_length=1000):
+    """Sanitize user input to prevent XSS and injection attacks"""
+    if not text:
+        return ""
+    if not isinstance(text, str):
+        return ""
+    # Truncate to max length
+    text = text[:max_length]
+    # HTML escape to prevent XSS
+    text = html.escape(text)
+    # Remove potentially dangerous patterns
+    dangerous_patterns = ['<script', '</script>', 'javascript:', 'onerror=', 'onload=', 'onclick=']
+    for pattern in dangerous_patterns:
+        text = text.replace(pattern, '')
+    return text.strip()
+
+def validate_date(date_str):
+    """Validate date format YYYY-MM-DD"""
+    if not date_str or not isinstance(date_str, str):
+        return False
+    try:
+        from datetime import datetime
+        datetime.strptime(date_str, '%Y-%m-%d')
+        return True
+    except:
+        return False
+
+def validate_message(message, max_length=500):
+    """Validate AI chat message"""
+    if not message or not isinstance(message, str):
+        return False
+    if len(message) > max_length:
+        return False
+    # Check for suspicious patterns
+    suspicious = ['<script', 'javascript:', 'eval(', 'document.cookie', 'window.location']
+    for pattern in suspicious:
+        if pattern.lower() in message.lower():
+            return False
+    return True
+
+# ── Rate Limiting (In-Memory) ───────────────────────────────────────
+from collections import defaultdict
+from time import time
+
+class RateLimiter:
+    """Simple in-memory rate limiter"""
+    def __init__(self, max_requests=60, window=60):
+        self.max_requests = max_requests
+        self.window = window
+        self.requests = defaultdict(list)
+    
+    def is_allowed(self, key):
+        """Check if request is allowed for given key"""
+        now = time()
+        # Remove old requests outside the window
+        self.requests[key] = [t for t in self.requests[key] if now - t < self.window]
+        
+        # Check if under limit
+        if len(self.requests[key]) >= self.max_requests:
+            return False
+        
+        # Add current request
+        self.requests[key].append(now)
+        return True
+    
+    def get_remaining(self, key):
+        """Get remaining requests for given key"""
+        now = time()
+        self.requests[key] = [t for t in self.requests[key] if now - t < self.window]
+        return max(0, self.max_requests - len(self.requests[key]))
+
+# Initialize rate limiters
+ai_chat_rate_limiter = RateLimiter(max_requests=30, window=60)  # 30 requests per minute
+api_rate_limiter = RateLimiter(max_requests=100, window=60)  # 100 requests per minute
+
+# ── CSRF Protection ─────────────────────────────────────────────────
+import secrets
+
+csrf_tokens = {}
+
+def generate_csrf_token():
+    """Generate a new CSRF token"""
+    return secrets.token_hex(32)
+
+def validate_csrf_token(token):
+    """Validate CSRF token"""
+    if not token:
+        return False
+    # Simple validation - in production, use proper session-based tokens
+    # For this demo, we'll just check if token format is valid
+    if len(token) != 64:
+        return False
+    try:
+        int(token, 16)
+        return True
+    except:
+        return False
+
 # ── Config ───────────────────────────────────────────────────────
 BASE = "https://www.bi.go.id/hargapangan/WebSite/TabelHarga"
 HEADERS = {
@@ -568,16 +701,32 @@ def call_groq_api(message, conversation_history=None):
 def ai_chat():
     """Handle AI chat using GROQ API"""
     try:
+        # Rate limiting by IP address
+        client_ip = request.remote_addr
+        if not ai_chat_rate_limiter.is_allowed(client_ip):
+            remaining = ai_chat_rate_limiter.get_remaining(client_ip)
+            return jsonify({
+                'error': 'Too many requests',
+                'remaining': remaining
+            }), 429
+        
         data = request.json
+        if not data:
+            return jsonify({'error': 'Invalid request'}), 400
+        
         user_message = data.get('message', '').strip()
         
-        if not user_message:
-            return jsonify({'error': 'Message is required'}), 400
+        # Validate message
+        if not validate_message(user_message):
+            return jsonify({'error': 'Invalid message format or content'}), 400
         
-        print(f"[AI Chat] Received message: {user_message[:50]}...")
+        # Sanitize message
+        sanitized_message = sanitize_input(user_message, max_length=500)
+        
+        print(f"[AI Chat] Received message: {sanitized_message[:50]}...")
         print(f"[AI Chat] GROQ_API_KEY exists: {bool(GROQ_API_KEY)}")
         
-        response, error = call_groq_api(user_message)
+        response, error = call_groq_api(sanitized_message)
         
         if error:
             print(f"[AI Chat] Error: {error}")
@@ -588,7 +737,7 @@ def ai_chat():
         
     except Exception as e:
         print(f"[AI Chat] Exception: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ─── Routes: Reference Data ──────────────────────────────────────
@@ -674,6 +823,11 @@ def recommend_regency(province_id):
 
 @app.route('/api/start', methods=['POST'])
 def start_scraping():
+    # Validate CSRF token for state-changing operation
+    csrf_token = request.headers.get('X-CSRF-Token')
+    if not validate_csrf_token(csrf_token):
+        return jsonify({'error': 'Invalid CSRF token'}), 403
+    
     data = request.get_json()
     job_id = str(uuid.uuid4())[:8]
     jobs[job_id] = {
@@ -682,6 +836,13 @@ def start_scraping():
     }
     threading.Thread(target=run_scraping_job, args=(job_id, data), daemon=True).start()
     return jsonify({'job_id': job_id})
+
+
+@app.route('/api/csrf-token', methods=['GET'])
+def get_csrf_token():
+    """Generate and return CSRF token"""
+    token = generate_csrf_token()
+    return jsonify({'csrf_token': token})
 
 
 @app.route('/api/status/<job_id>')
