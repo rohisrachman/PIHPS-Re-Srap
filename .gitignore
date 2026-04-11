@@ -37,6 +37,7 @@ ENV/
 
 # OS
 .DS_Store
+DS_Store
 Thumbs.db
 
 # Storage & logs

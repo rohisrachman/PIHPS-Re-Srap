@@ -252,4 +252,108 @@
   
   document.getElementById('tgl-mulai').value = formatDate(oneYearAgo);
   document.getElementById('tgl-selesai').value = formatDate(today);
+
+  // AI Assistant Functions
+  function openAIPopup() {
+    document.getElementById('ai-popup').classList.remove('hidden');
+  }
+  
+  function closeAIPopup() {
+    document.getElementById('ai-popup').classList.add('hidden');
+  }
+  
+  async function sendToAIPopup() {
+    const input = document.getElementById('ai-popup-input');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    const chatArea = document.getElementById('ai-chat-area');
+    
+    // Add user message
+    const userMsgDiv = document.createElement('div');
+    userMsgDiv.className = 'flex gap-3 justify-end';
+    userMsgDiv.innerHTML = `
+      <div class="flex-1 text-right">
+        <div class="glass rounded-xl rounded-tr-sm p-3 bg-primary/20 inline-block">
+          <p class="text-sm text-gray-300">${message}</p>
+        </div>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-success to-accent flex-shrink-0 flex items-center justify-center">
+        <i class="fas fa-user text-white text-xs"></i>
+      </div>
+    `;
+    chatArea.appendChild(userMsgDiv);
+    
+    // Clear input
+    input.value = '';
+    
+    // Add loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'flex gap-3';
+    loadingDiv.id = 'ai-loading';
+    loadingDiv.innerHTML = `
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex-shrink-0 flex items-center justify-center">
+        <i class="fas fa-robot text-white text-xs"></i>
+      </div>
+      <div class="flex-1">
+        <div class="glass rounded-xl rounded-tl-sm p-3">
+          <p class="text-sm text-gray-400">Sedang mengetik...</p>
+        </div>
+      </div>
+    `;
+    chatArea.appendChild(loadingDiv);
+    chatArea.scrollTop = chatArea.scrollHeight;
+    
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: message })
+      });
+      
+      const data = await response.json();
+      
+      // Remove loading indicator
+      document.getElementById('ai-loading').remove();
+      
+      // Add AI response
+      const aiMsgDiv = document.createElement('div');
+      aiMsgDiv.className = 'flex gap-3';
+      aiMsgDiv.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex-shrink-0 flex items-center justify-center">
+          <i class="fas fa-robot text-white text-xs"></i>
+        </div>
+        <div class="flex-1">
+          <div class="glass rounded-xl rounded-tl-sm p-3">
+            <p class="text-sm text-gray-300">${data.response || data.error || 'Maaf, terjadi kesalahan.'}</p>
+          </div>
+        </div>
+      `;
+      chatArea.appendChild(aiMsgDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      
+    } catch (error) {
+      // Remove loading indicator
+      document.getElementById('ai-loading').remove();
+      
+      // Add error message
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'flex gap-3';
+      errorDiv.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-danger to-warning flex-shrink-0 flex items-center justify-center">
+          <i class="fas fa-exclamation text-white text-xs"></i>
+        </div>
+        <div class="flex-1">
+          <div class="glass rounded-xl rounded-tl-sm p-3 bg-danger/20">
+            <p class="text-sm text-danger">Maaf, terjadi kesalahan koneksi. Silakan coba lagi.</p>
+          </div>
+        </div>
+      `;
+      chatArea.appendChild(errorDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+  }
 </script>

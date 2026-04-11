@@ -533,6 +533,58 @@ def run_scraping_job(job_id, params):
     job['gagal'] = gagal
 
 
+# ─── Routes: AI Assistant (GROQ API) ─────────────────────────────
+
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL = 'llama-3.1-8b-instant'
+
+def call_groq_api(message, conversation_history=None):
+    if not GROQ_API_KEY:
+        return None, "GROQ_API_KEY belum diatur"
+    
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    
+    messages = [
+        {"role": "system", "content": "Anda adalah AI Assistant untuk PIHPS Dashboard. Anda membantu pengguna dengan: panduan penggunaan dashboard, informasi komoditas, analisis data harga, dan troubleshooting. Jawab dengan ringkas dan membantu dalam bahasa Indonesia."},
+        {"role": "user", "content": message}
+    ]
+    
+    try:
+        resp = requests.post(url, json={
+            "model": GROQ_MODEL,
+            "messages": messages,
+            "max_tokens": 800,
+            "temperature": 0.7
+        }, headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }, timeout=30)
+        resp.raise_for_status()
+        return resp.json()['choices'][0]['message']['content'], None
+    except Exception as e:
+        return None, str(e)
+
+@app.route('/api/ai/chat', methods=['POST'])
+def ai_chat():
+    """Handle AI chat using GROQ API"""
+    try:
+        data = request.json
+        user_message = data.get('message', '').strip()
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        response, error = call_groq_api(user_message)
+        
+        if error:
+            return jsonify({'error': error}), 500
+        
+        return jsonify({'response': response})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # ─── Routes: Reference Data ──────────────────────────────────────
 
 @app.route('/')
