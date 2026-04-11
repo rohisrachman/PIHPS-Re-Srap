@@ -493,7 +493,27 @@ def run_scraping_job(job_id, params):
             job['df_stats'] = df_all.groupby('Komoditas').size().reset_index(
                 name='Jumlah Baris').to_dict(orient='records')
             job['total_rows'] = len(df_all)
-            job['filename'] = f"harga_pangan_{tgl_mulai}_sd_{tgl_selesai}.xlsx"
+            
+            # Format filename: <provinsi>_<tanggal_bulan_tahun awal s.d tanggal_bulan_tahun akhir>
+            # Date format: "Des-26" (Bulan Singkat-Tahun 2 digit)
+            def format_date_indo(date_str):
+                """Convert YYYY-MM-DD to Mmm-YY format (Indonesian)"""
+                bulan_indo = {
+                    '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+                    '05': 'Mei', '06': 'Jun', '07': 'Jul', '08': 'Agu',
+                    '09': 'Sep', '10': 'Okt', '11': 'Nov', '12': 'Des'
+                }
+                try:
+                    year, month, day = date_str.split('-')
+                    short_year = year[-2:]  # Last 2 digits of year
+                    return f"{bulan_indo.get(month, month)}-{short_year}"
+                except:
+                    return date_str
+            
+            provinsi_clean = province_name.replace(' ', '_').replace('/', '_')
+            tgl_mulai_fmt = format_date_indo(tgl_mulai)
+            tgl_selesai_fmt = format_date_indo(tgl_selesai)
+            job['filename'] = f"{provinsi_clean}_{tgl_mulai_fmt}_s.d_{tgl_selesai_fmt}.xlsx"
             log(f"💾 Excel siap — {len(df_all)} baris total")
             log(f"✅ Shape validation: {shape_before} → {shape_after} ({'MATCH' if job['shape_validation']['match'] else 'MISMATCH'})")
 
