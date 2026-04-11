@@ -8,6 +8,7 @@ import time
 import threading
 import uuid
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -20,6 +21,7 @@ from urllib3.util.retry import Retry
 import pandas as pd
 import warnings
 from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 from pymongo.errors import ConnectionFailure
 from dotenv import load_dotenv
 
@@ -43,56 +45,51 @@ STORAGE_DIR = Path("storage")
 STORAGE_DIR.mkdir(exist_ok=True)
 
 # ── MongoDB Connection ───────────────────────────────────────────
-# Connection details from .env file (password with special chars needs encoding)
-MONGO_USER = os.environ.get('MONGO_USER', 'Vercel-Admin-atlas-citron-cushion')
-MONGO_PASS = os.environ.get('MONGO_PASS', '')
-MONGO_HOST = os.environ.get('MONGO_HOST', 'atlas-citron-cushion.4u1fsog.mongodb.net')
+# Get MongoDB URI from environment variable (Vercel/Atlas format)
+MONGODB_URI = os.environ.get('MONGODB_URI')
 MONGO_DB = os.environ.get('MONGO_DB', 'pihps_dashboard')
 
-# Build connection string with encoded password
+# Initialize MongoDB client
 mongo_client = None
 db = None
 
 def init_mongodb():
-    """Initialize MongoDB connection"""
+    """Initialize MongoDB connection using MongoDB Atlas format"""
     global mongo_client, db
     try:
-        if MONGO_PASS:
-            # Encode username and password for special characters
-            encoded_user = quote_plus(MONGO_USER)
-            encoded_pass = quote_plus(MONGO_PASS)
-            # Use exact MongoDB Atlas format
-            mongo_uri = f"mongodb+srv://{encoded_user}:{encoded_pass}@{MONGO_HOST}/?retryWrites=true&w=majority&appName=atlas-citron-cushion"
-            
+        if MONGODB_URI:
             # Debug: print connection string (hide password)
-            debug_uri = mongo_uri.replace(encoded_pass, "***")
+            # Find password between : and @
+            debug_uri = re.sub(r':([^:@]+)@', ':***@', MONGODB_URI)
             print(f"🔌 Connecting to: {debug_uri}")
             
-            # Connect with SSL certificate verification (try True first, fallback to False for dev)
+            # Create a new client and connect to the server (MongoDB Atlas format)
+            # Try with SSL first, fallback to no SSL verification for development
             try:
                 mongo_client = MongoClient(
-                    mongo_uri, 
-                    serverSelectionTimeoutMS=5000,
+                    MONGODB_URI, 
+                    server_api=ServerApi('1'),
                     tls=True,
-                    tlsAllowInvalidCertificates=False
+                    tlsAllowInvalidCertificates=False,
+                    serverSelectionTimeoutMS=5000
                 )
                 mongo_client.admin.command('ping')
             except Exception:
-                # Fallback: allow invalid certificates for development
-                print("⚠️  SSL certificate verification failed, retrying with tlsAllowInvalidCertificates=True")
+                print("⚠️  SSL verification failed, retrying with tlsAllowInvalidCertificates=True")
                 mongo_client = MongoClient(
-                    mongo_uri, 
-                    serverSelectionTimeoutMS=5000,
+                    MONGODB_URI, 
+                    server_api=ServerApi('1'),
                     tls=True,
-                    tlsAllowInvalidCertificates=True
+                    tlsAllowInvalidCertificates=True,
+                    serverSelectionTimeoutMS=5000
                 )
                 mongo_client.admin.command('ping')
             
             db = mongo_client.get_database(MONGO_DB)
-            print("✅ MongoDB connected successfully")
+            print("✅ MongoDB connected successfully!")
             return True
         else:
-            print("⚠️  MongoDB password not found. Please set MONGO_PASS in .env file")
+            print("⚠️  MONGODB_URI not found. Please set it in .env file")
             return False
     except ConnectionFailure as e:
         print(f"❌ MongoDB connection failed: {e}")
