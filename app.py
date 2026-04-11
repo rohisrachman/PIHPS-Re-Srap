@@ -574,14 +574,20 @@ def ai_chat():
         if not user_message:
             return jsonify({'error': 'Message is required'}), 400
         
+        print(f"[AI Chat] Received message: {user_message[:50]}...")
+        print(f"[AI Chat] GROQ_API_KEY exists: {bool(GROQ_API_KEY)}")
+        
         response, error = call_groq_api(user_message)
         
         if error:
+            print(f"[AI Chat] Error: {error}")
             return jsonify({'error': error}), 500
         
+        print(f"[AI Chat] Response received")
         return jsonify({'response': response})
         
     except Exception as e:
+        print(f"[AI Chat] Exception: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
