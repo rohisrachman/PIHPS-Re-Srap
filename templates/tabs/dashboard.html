@@ -112,18 +112,8 @@
       <div class="h-[300px]">
         <canvas id="trend-chart" data-chart-type="trend"></canvas>
       </div>
-      <div class="mt-3 flex items-center gap-4 text-xs">
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full bg-primary"></div>
-          <span class="text-gray-400">Harga</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full bg-warning/50"></div>
-          <span class="text-gray-400">Bollinger Bands (Volatilitas)</span>
-        </div>
-        <div id="ews-alert" class="hidden ml-auto px-3 py-1 bg-danger/20 border border-danger/30 rounded-full text-danger font-medium">
-          <i class="fas fa-exclamation-triangle mr-1"></i> EWS: Intervensi Diperlukan
-        </div>
+      <div id="ews-alert" class="hidden mt-3 px-3 py-1 bg-danger/20 border border-danger/30 rounded-full text-danger font-medium text-xs">
+        <i class="fas fa-exclamation-triangle mr-1"></i> EWS: Intervensi Diperlukan
       </div>
     </div>
 
@@ -198,20 +188,6 @@
       
       <div class="h-[250px]">
         <canvas id="forecast-chart" data-chart-type="forecast"></canvas>
-      </div>
-      <div class="mt-3 flex items-center gap-4 text-xs">
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full bg-primary"></div>
-          <span class="text-gray-400">Data Historis</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full bg-warning border border-dashed border-warning"></div>
-          <span class="text-gray-400">Proyeksi (Forecast)</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full bg-success/30 border border-success"></div>
-          <span class="text-gray-400">Confidence Interval</span>
-        </div>
       </div>
     </div>
 

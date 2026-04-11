@@ -1029,7 +1029,7 @@ function populateWilayahCheckboxes(data, selectedKom) {
     html += `
       <label class="flex items-center gap-1.5 px-2 py-1 bg-dark-600/50 rounded cursor-pointer hover:bg-dark-500/50 transition-colors text-xs">
         <input type="checkbox" class="trend-wilayah-checkbox w-3 h-3 rounded border-dark-500 text-primary focus:ring-primary" 
-               value="${wilayah}" ${checked} onchange="updateTrendChart()">
+               value="${wilayah}" ${checked} onchange="onTrendCheckboxChange()">
         <span class="text-gray-300 whitespace-nowrap">${wilayah.substring(0, 15)}${wilayah.length > 15 ? '..' : ''}</span>
       </label>
     `;
@@ -1049,7 +1049,7 @@ function selectAllWilayah() {
   document.querySelectorAll('.trend-wilayah-checkbox').forEach(cb => {
     cb.checked = true;
   });
-  updateTrendChart();
+  onTrendCheckboxChange();
 }
 
 // Clear all wilayah selection
@@ -1057,7 +1057,14 @@ function clearAllWilayah() {
   document.querySelectorAll('.trend-wilayah-checkbox').forEach(cb => {
     cb.checked = false;
   });
-  updateTrendChart();
+  onTrendCheckboxChange();
+}
+
+// Handle checkbox change for trend chart (only re-render, don't re-populate)
+function onTrendCheckboxChange() {
+  if (currentDashboardData) {
+    debouncedUpdateTrendChart();
+  }
 }
 
 // Populate wilayah checkboxes for forecast chart
@@ -1088,7 +1095,7 @@ function populateForecastWilayahCheckboxes(data, selectedKom) {
     html += `
       <label class="flex items-center gap-1.5 px-2 py-1 bg-dark-600/50 rounded cursor-pointer hover:bg-dark-500/50 transition-colors text-xs">
         <input type="checkbox" class="forecast-wilayah-checkbox w-3 h-3 rounded border-dark-500 text-warning focus:ring-warning" 
-               value="${wilayah}" ${checked} onchange="updateForecastChart()">
+               value="${wilayah}" ${checked} onchange="onForecastCheckboxChange()">
         <span class="text-gray-300 whitespace-nowrap">${wilayah.substring(0, 15)}${wilayah.length > 15 ? '..' : ''}</span>
       </label>
     `;
@@ -1107,14 +1114,21 @@ function selectAllWilayahForecast() {
   document.querySelectorAll('.forecast-wilayah-checkbox').forEach(cb => {
     cb.checked = true;
   });
-  updateForecastChart();
+  onForecastCheckboxChange();
 }
 
 function clearAllWilayahForecast() {
   document.querySelectorAll('.forecast-wilayah-checkbox').forEach(cb => {
     cb.checked = false;
   });
-  updateForecastChart();
+  onForecastCheckboxChange();
+}
+
+// Handle checkbox change for forecast chart (only re-render, don't re-populate)
+function onForecastCheckboxChange() {
+  if (currentDashboardData) {
+    debouncedUpdateForecastChart();
+  }
 }
 
 // 1. Executive Summary - Top Gainers & Losers
