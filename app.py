@@ -23,6 +23,7 @@ import warnings
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from pymongo.errors import ConnectionFailure
+import gridfs
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -52,10 +53,12 @@ MONGO_DB = os.environ.get('MONGO_DB', 'pihps_dashboard')
 # Initialize MongoDB client
 mongo_client = None
 db = None
+fs = None  # GridFS for file storage
+storage_collection = None  # MongoDB collection for metadata
 
 def init_mongodb():
     """Initialize MongoDB connection using MongoDB Atlas format"""
-    global mongo_client, db
+    global mongo_client, db, fs, storage_collection
     try:
         if MONGODB_URI:
             # Debug: print connection string (hide password)
@@ -86,6 +89,8 @@ def init_mongodb():
                 mongo_client.admin.command('ping')
             
             db = mongo_client.get_database(MONGO_DB)
+            fs = gridfs.GridFS(db)  # Initialize GridFS
+            storage_collection = db['storage_metadata']  # Collection for file metadata
             print("✅ MongoDB connected successfully!")
             return True
         else:
@@ -130,22 +135,25 @@ def get_session():
 
 
 def load_storage_metadata():
-    """Load existing storage metadata"""
+    """Load existing storage metadata from MongoDB"""
     global storage_metadata
-    meta_file = STORAGE_DIR / "metadata.json"
-    if meta_file.exists():
-        try:
-            with open(meta_file) as f:
-                storage_metadata = json.load(f)
-        except:
+    try:
+        if storage_collection is not None:
             storage_metadata = {}
+            for doc in storage_collection.find():
+                doc_id = str(doc.pop('_id'))
+                storage_metadata[doc_id] = doc
+        else:
+            storage_metadata = {}
+    except Exception as e:
+        print(f"⚠️  Could not load from MongoDB, using empty storage: {e}")
+        storage_metadata = {}
 
 
 def save_storage_metadata():
-    """Save storage metadata"""
-    meta_file = STORAGE_DIR / "metadata.json"
-    with open(meta_file, "w") as f:
-        json.dump(storage_metadata, f, indent=2)
+    """Save storage metadata - now handled automatically by MongoDB inserts"""
+    # No-op: Metadata is saved directly to MongoDB when files are stored
+    pass
 
 
 # ─── Helpers API ─────────────────────────────────────────────────
@@ -636,25 +644,45 @@ def download(job_id):
     if not job or 'excel_bytes' not in job:
         return jsonify({'error': 'Data belum tersedia'}), 404
 
-    # Save to storage
+    # Save to GridFS
     file_id = str(uuid.uuid4())[:12]
     filename = job.get('filename', 'pihps_data.xlsx')
-    filepath = STORAGE_DIR / f"{file_id}.xlsx"
-
-    with open(filepath, 'wb') as f:
-        f.write(job['excel_bytes'])
-
-    # Save metadata
-    storage_metadata[file_id] = {
-        'id': file_id,
-        'name': filename,
-        'timestamp': datetime.now().isoformat(),
-        'rows': job.get('total_rows', 0),
-        'komoditas_count': len(job.get('komoditas_dari_api', [])),
-        'komoditas': job.get('komoditas_dari_api', []),
-        'provinsi': job.get('provinsi', 'Unknown'),
-    }
-    save_storage_metadata()
+    
+    try:
+        if fs is not None:
+            # Store file in GridFS
+            grid_id = fs.put(
+                job['excel_bytes'],
+                filename=filename,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            mongo_file_id = str(grid_id)
+        else:
+            mongo_file_id = None
+            # Fallback: save to local storage
+            filepath = STORAGE_DIR / f"{file_id}.xlsx"
+            with open(filepath, 'wb') as f:
+                f.write(job['excel_bytes'])
+        
+        # Save metadata to MongoDB
+        metadata_doc = {
+            'id': file_id,
+            'name': filename,
+            'timestamp': datetime.now().isoformat(),
+            'rows': job.get('total_rows', 0),
+            'komoditas_count': len(job.get('komoditas_dari_api', [])),
+            'komoditas': job.get('komoditas_dari_api', []),
+            'provinsi': job.get('provinsi', 'Unknown'),
+            'mongo_file_id': mongo_file_id,  # Reference to GridFS file
+        }
+        
+        if storage_collection is not None:
+            storage_collection.insert_one({'_id': file_id, **metadata_doc})
+        storage_metadata[file_id] = metadata_doc
+        
+    except Exception as e:
+        print(f"❌ Error saving to storage: {e}")
+        return jsonify({'error': f'Gagal menyimpan: {str(e)}'}), 500
 
     return send_file(
         io.BytesIO(job['excel_bytes']),
@@ -672,16 +700,27 @@ def save_job_to_storage(job_id):
         return jsonify({'error': 'Data belum tersedia'}), 404
     
     try:
-        # Save to storage
+        # Save to GridFS
         file_id = str(uuid.uuid4())[:12]
         filename = job.get('filename', 'pihps_data.xlsx')
-        filepath = STORAGE_DIR / f"{file_id}.xlsx"
-
-        with open(filepath, 'wb') as f:
-            f.write(job['excel_bytes'])
-
-        # Save metadata
-        storage_metadata[file_id] = {
+        
+        if fs is not None:
+            # Store file in GridFS
+            grid_id = fs.put(
+                job['excel_bytes'],
+                filename=filename,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            mongo_file_id = str(grid_id)
+        else:
+            mongo_file_id = None
+            # Fallback: save to local storage
+            filepath = STORAGE_DIR / f"{file_id}.xlsx"
+            with open(filepath, 'wb') as f:
+                f.write(job['excel_bytes'])
+        
+        # Save metadata to MongoDB
+        metadata_doc = {
             'id': file_id,
             'name': filename,
             'timestamp': datetime.now().isoformat(),
@@ -689,9 +728,13 @@ def save_job_to_storage(job_id):
             'komoditas_count': len(job.get('komoditas_dari_api', [])),
             'komoditas': job.get('komoditas_dari_api', []),
             'provinsi': job.get('provinsi', 'Unknown'),
+            'mongo_file_id': mongo_file_id,
         }
-        save_storage_metadata()
-
+        
+        if storage_collection is not None:
+            storage_collection.insert_one({'_id': file_id, **metadata_doc})
+        storage_metadata[file_id] = metadata_doc
+        
         return jsonify({'ok': True, 'file_id': file_id, 'message': 'Data berhasil disimpan'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -701,97 +744,204 @@ def save_job_to_storage(job_id):
 
 @app.route('/api/storage/list')
 def storage_list():
-    load_storage_metadata()
-    result = list(storage_metadata.values())
-    result.sort(key=lambda x: x['timestamp'], reverse=True)
-    return jsonify(result)
+    try:
+        if storage_collection is not None:
+            # Load from MongoDB
+            result = list(storage_collection.find())
+            for r in result:
+                r['id'] = str(r.pop('_id'))
+            result.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            return jsonify(result)
+        else:
+            # Fallback to in-memory
+            load_storage_metadata()
+            result = list(storage_metadata.values())
+            result.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/storage/download/<file_id>')
 def storage_download(file_id):
-    load_storage_metadata()
-    if file_id not in storage_metadata:
-        return jsonify({'error': 'File tidak ditemukan'}), 404
-
-    filepath = STORAGE_DIR / f"{file_id}.xlsx"
-    if not filepath.exists():
-        return jsonify({'error': 'File tidak ditemukan di disk'}), 404
-
-    meta = storage_metadata[file_id]
-    return send_file(
-        filepath,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=meta['name']
-    )
+    try:
+        # Get metadata from MongoDB
+        if storage_collection is not None:
+            meta = storage_collection.find_one({'_id': file_id})
+        else:
+            load_storage_metadata()
+            meta = storage_metadata.get(file_id)
+        
+        if not meta:
+            return jsonify({'error': 'File tidak ditemukan'}), 404
+        
+        filename = meta.get('name', 'pihps_data.xlsx')
+        mongo_file_id = meta.get('mongo_file_id')
+        
+        if fs is not None and mongo_file_id:
+            # Download from GridFS
+            from bson.objectid import ObjectId
+            grid_file = fs.get(ObjectId(mongo_file_id))
+            return send_file(
+                io.BytesIO(grid_file.read()),
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        else:
+            # Fallback: download from local storage
+            filepath = STORAGE_DIR / f"{file_id}.xlsx"
+            if not filepath.exists():
+                return jsonify({'error': 'File tidak ditemukan di disk'}), 404
+            return send_file(
+                filepath,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+    except Exception as e:
+        return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
 
 
 @app.route('/api/storage/delete/<file_id>', methods=['POST'])
 def storage_delete(file_id):
-    load_storage_metadata()
-    if file_id not in storage_metadata:
-        return jsonify({'error': 'File tidak ditemukan'}), 404
-
-    filepath = STORAGE_DIR / f"{file_id}.xlsx"
-    if filepath.exists():
-        filepath.unlink()
-
-    del storage_metadata[file_id]
-    save_storage_metadata()
-    return jsonify({'ok': True})
+    try:
+        # Get metadata
+        if storage_collection is not None:
+            meta = storage_collection.find_one({'_id': file_id})
+        else:
+            load_storage_metadata()
+            meta = storage_metadata.get(file_id)
+        
+        if not meta:
+            return jsonify({'error': 'File tidak ditemukan'}), 404
+        
+        mongo_file_id = meta.get('mongo_file_id')
+        
+        # Delete from GridFS if exists
+        if fs is not None and mongo_file_id:
+            try:
+                from bson.objectid import ObjectId
+                fs.delete(ObjectId(mongo_file_id))
+            except:
+                pass  # File might not exist in GridFS
+        else:
+            # Fallback: delete local file
+            filepath = STORAGE_DIR / f"{file_id}.xlsx"
+            if filepath.exists():
+                filepath.unlink()
+        
+        # Delete metadata from MongoDB
+        if storage_collection is not None:
+            storage_collection.delete_one({'_id': file_id})
+        
+        if file_id in storage_metadata:
+            del storage_metadata[file_id]
+        
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/storage/clear', methods=['POST'])
 def storage_clear():
-    load_storage_metadata()
-    for file_id in list(storage_metadata.keys()):
-        filepath = STORAGE_DIR / f"{file_id}.xlsx"
-        if filepath.exists():
-            filepath.unlink()
-    storage_metadata.clear()
-    save_storage_metadata()
-    return jsonify({'ok': True})
+    try:
+        if storage_collection is not None and fs is not None:
+            # Get all metadata
+            all_docs = list(storage_collection.find())
+            # Delete files from GridFS
+            for doc in all_docs:
+                mongo_file_id = doc.get('mongo_file_id')
+                if mongo_file_id:
+                    try:
+                        from bson.objectid import ObjectId
+                        fs.delete(ObjectId(mongo_file_id))
+                    except:
+                        pass
+            # Clear metadata collection
+            storage_collection.delete_many({})
+        else:
+            # Fallback: clear local files
+            for file_id in list(storage_metadata.keys()):
+                filepath = STORAGE_DIR / f"{file_id}.xlsx"
+                if filepath.exists():
+                    filepath.unlink()
+        
+        storage_metadata.clear()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/storage/preview/<file_id>')
 def storage_preview(file_id):
     """Preview stored Excel file data as JSON"""
-    load_storage_metadata()
-    if file_id not in storage_metadata:
-        return jsonify({'error': 'File tidak ditemukan'}), 404
-
-    filepath = STORAGE_DIR / f"{file_id}.xlsx"
-    if not filepath.exists():
-        return jsonify({'error': 'File tidak ditemukan di disk'}), 404
-
     try:
-        # Read Excel file
-        df = pd.read_excel(filepath, sheet_name='Semua Komoditas')
+        # Get metadata
+        if storage_collection is not None:
+            meta = storage_collection.find_one({'_id': file_id})
+        else:
+            load_storage_metadata()
+            meta = storage_metadata.get(file_id)
         
-        # Get preview (first 50 rows)
-        preview_data = df.head(50).to_dict(orient='records')
-        columns = list(df.columns)
-        total_rows = len(df)
+        if not meta:
+            return jsonify({'error': 'File tidak ditemukan'}), 404
         
-        return jsonify({
-            'columns': columns,
-            'preview': preview_data,
-            'total_rows': total_rows,
-            'filename': storage_metadata[file_id]['name']
-        })
+        filename = meta.get('name', 'pihps_data.xlsx')
+        mongo_file_id = meta.get('mongo_file_id')
+        
+        try:
+            if fs is not None and mongo_file_id:
+                # Read from GridFS
+                from bson.objectid import ObjectId
+                grid_file = fs.get(ObjectId(mongo_file_id))
+                file_data = grid_file.read()
+                df = pd.read_excel(io.BytesIO(file_data), sheet_name='Semua Komoditas')
+            else:
+                # Fallback: read from local storage
+                filepath = STORAGE_DIR / f"{file_id}.xlsx"
+                if not filepath.exists():
+                    return jsonify({'error': 'File tidak ditemukan di disk'}), 404
+                df = pd.read_excel(filepath, sheet_name='Semua Komoditas')
+            
+            # Get preview (first 50 rows)
+            preview_data = df.head(50).to_dict(orient='records')
+            columns = list(df.columns)
+            total_rows = len(df)
+            
+            return jsonify({
+                'columns': columns,
+                'preview': preview_data,
+                'total_rows': total_rows,
+                'filename': filename
+            })
+        except Exception as e:
+            return jsonify({'error': f'Error reading file: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': f'Error reading file: {str(e)}'}), 500
+        return jsonify({'error': f'Error: {str(e)}'}), 500
 
 
 # ─── Routes: Dashboard Stats ────────────────────────────────────
 
 @app.route('/api/dashboard/stats')
 def dashboard_stats():
-    load_storage_metadata()
-
+    try:
+        # Load from MongoDB if available
+        if storage_collection is not None:
+            all_metadata = list(storage_collection.find())
+            for m in all_metadata:
+                m['id'] = str(m.pop('_id'))
+        else:
+            load_storage_metadata()
+            all_metadata = list(storage_metadata.values())
+    except Exception as e:
+        # Fallback to in-memory if MongoDB fails
+        load_storage_metadata()
+        all_metadata = list(storage_metadata.values())
+    
     total_jobs = len(jobs)
-    total_rows = sum(meta.get('rows', 0) for meta in storage_metadata.values())
-    total_files = len(storage_metadata)
+    total_rows = sum(meta.get('rows', 0) for meta in all_metadata)
+    total_files = len(all_metadata)
 
     # Recent jobs
     recent_jobs = []
@@ -806,7 +956,7 @@ def dashboard_stats():
 
     # Popular komoditas
     kom_count = {}
-    for meta in storage_metadata.values():
+    for meta in all_metadata:
         for k in meta.get('komoditas', []):
             kom_count[k] = kom_count.get(k, 0) + 1
     popular_komoditas = [
@@ -815,7 +965,7 @@ def dashboard_stats():
 
     # Popular provinces
     prov_count = {}
-    for meta in storage_metadata.values():
+    for meta in all_metadata:
         p = meta.get('provinsi', 'Unknown')
         prov_count[p] = prov_count.get(p, 0) + 1
     popular_provinces = [

@@ -69,5 +69,36 @@
       "Beras"
     ],
     "provinsi": "Gorontalo"
+  },
+  "17fe650b-e96": {
+    "id": "17fe650b-e96",
+    "name": "harga_pangan_2025-04-11_sd_2026-04-11.xlsx",
+    "timestamp": "2026-04-11T18:44:52.510954",
+    "rows": 30,
+    "komoditas_count": 10,
+    "komoditas": [
+      "Beras",
+      "Daging Ayam",
+      "Daging Sapi",
+      "Telur Ayam",
+      "Bawang Merah",
+      "Bawang Putih",
+      "Cabai Merah",
+      "Cabai Rawit",
+      "Minyak Goreng",
+      "Gula Pasir"
+    ],
+    "provinsi": "DKI Jakarta"
+  },
+  "84351d17-ceb": {
+    "id": "84351d17-ceb",
+    "name": "harga_pangan_2025-04-11_sd_2026-04-11.xlsx",
+    "timestamp": "2026-04-11T18:51:28.398123",
+    "rows": 3,
+    "komoditas_count": 1,
+    "komoditas": [
+      "Beras"
+    ],
+    "provinsi": "Bengkulu"
   }
 }
