@@ -110,7 +110,6 @@ def validate_message(message, max_length=500):
 
 # ── Rate Limiting (In-Memory) ───────────────────────────────────────
 from collections import defaultdict
-from time import time
 
 class RateLimiter:
     """Simple in-memory rate limiter"""
@@ -121,7 +120,7 @@ class RateLimiter:
     
     def is_allowed(self, key):
         """Check if request is allowed for given key"""
-        now = time()
+        now = time.time()
         # Remove old requests outside the window
         self.requests[key] = [t for t in self.requests[key] if now - t < self.window]
         
@@ -135,7 +134,7 @@ class RateLimiter:
     
     def get_remaining(self, key):
         """Get remaining requests for given key"""
-        now = time()
+        now = time.time()
         self.requests[key] = [t for t in self.requests[key] if now - t < self.window]
         return max(0, self.max_requests - len(self.requests[key]))
 
